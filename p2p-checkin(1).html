@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2P Sailing — Check-In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0d2233; --navy-soft:#22455f; --paper:#f2f5f6; --card:#fff;
+  --ink:#122430; --quiet:#5b7183; --rule:#c9d6dd; --hair:#e3eaee;
+  --starboard:#00843d; --port:#c8102e; --flag:#1f5c8b; --tint:#e4edf1; --amber:#b4690e;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{margin:0;letter-spacing:-.01em;}
+button{font:inherit;cursor:pointer;}
+input,select,textarea{font:inherit;color:inherit;}
+a{color:var(--flag);}
+
+/* topbar */
+.topbar{background:var(--navy);color:#e9f1f5;padding:0 20px;display:flex;align-items:center;gap:16px;height:60px;position:sticky;top:0;z-index:40;}
+.brand{font-weight:600;font-size:17px;}
+.brand small{display:block;font-weight:400;font-size:11px;color:#7fa8c2;letter-spacing:.02em;}
+.topbar .spacer{flex:1;}
+.who{font-size:13px;color:#bcd3e0;text-align:right;line-height:1.3;}
+.who b{display:block;color:#e9f1f5;font-weight:500;}
+.iconbtn{background:none;border:1px solid #2d5673;color:#cfe2ec;border-radius:6px;padding:7px 12px;font-size:13px;}
+.iconbtn:hover{border-color:#4d87ad;}
+
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 100px;}
+.narrow{max-width:520px;margin:0 auto;padding:40px 20px 100px;}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:22px;margin:0 0 20px;}
+.card h2{font-size:20px;margin:0 0 4px;color:var(--navy);}
+.card .sub{color:var(--quiet);font-size:14px;margin:0 0 18px;}
+
+/* forms */
+label{display:block;font-size:13px;font-weight:500;color:var(--navy-soft);margin:14px 0 5px;}
+input[type=text],input[type=email],input[type=tel],input[type=password],input[type=date],input[type=datetime-local],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;background:#fff;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--flag);outline-offset:-1px;border-color:var(--flag);}
+textarea{min-height:90px;resize:vertical;}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.row{grid-template-columns:1fr;}}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:11px 20px;font-weight:500;}
+.btn:hover{background:var(--navy-soft);}
+.btn[disabled]{opacity:.5;cursor:not-allowed;}
+.btn.ghost{background:none;color:var(--navy);border:1px solid var(--rule);}
+.btn.ghost:hover{background:var(--tint);}
+.btn.go{background:var(--starboard);}
+.btn.stop{background:var(--port);}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:5px;}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+
+/* board */
+.boardsec{margin:0 0 34px;}
+.boardsec h2{font-size:15px;color:var(--navy);text-transform:none;margin:0 0 2px;}
+.boardsec .count{color:var(--quiet);font-size:13px;margin:0 0 12px;}
+.grp{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:14px 16px;margin:0 0 10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.grp:hover{border-color:var(--rule);}
+.grp .main{flex:1;min-width:180px;cursor:pointer;}
+.grp .nm{font-weight:600;color:var(--navy);}
+.grp .meta{font-size:13px;color:var(--quiet);}
+.grp .dates{font-size:13px;color:var(--ink);white-space:nowrap;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px;}
+.dot.on{background:var(--starboard);} .dot.wait{background:var(--amber);} .dot.up{background:var(--flag);} .dot.off{background:var(--rule);} .dot.no{background:var(--port);}
+.late{color:var(--port);font-weight:500;}
+.empty{color:var(--quiet);font-size:14px;padding:14px 16px;background:var(--card);border:1px dashed var(--rule);border-radius:8px;}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin:0 0 24px;border-bottom:1px solid var(--rule);flex-wrap:wrap;}
+.tabs button{background:none;border:0;padding:10px 14px;color:var(--quiet);font-weight:500;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tabs button.sel{color:var(--navy);border-bottom-color:var(--navy);}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(13,34,51,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;z-index:60;}
+.modal{background:var(--card);border-radius:10px;max-width:680px;width:100%;padding:24px;margin:auto;}
+.modal h2{font-size:20px;color:var(--navy);}
+.modal .x{float:right;background:none;border:0;font-size:22px;color:var(--quiet);line-height:1;}
+
+/* misc */
+.pill{display:inline-block;font-size:12px;font-weight:500;padding:2px 9px;border-radius:20px;background:var(--tint);color:var(--navy-soft);}
+.pill.ok{background:#e2f2e9;color:var(--starboard);}
+.pill.warn{background:#fdf0dd;color:var(--amber);}
+.pill.bad{background:#fbe4e7;color:var(--port);}
+table.list{width:100%;border-collapse:collapse;font-size:14px;}
+table.list th{text-align:left;font-weight:600;color:var(--navy);padding:8px 10px;background:var(--tint);}
+table.list td{padding:9px 10px;border-top:1px solid var(--hair);vertical-align:top;}
+.msg{padding:11px 14px;border-radius:6px;margin:0 0 16px;font-size:14px;}
+.msg.err{background:#fbe4e7;color:#8c0b20;}
+.msg.ok{background:#e2f2e9;color:#0a5c30;}
+.hint{font-size:13px;color:var(--quiet);margin:6px 0 0;}
+.code{font-size:26px;font-weight:600;letter-spacing:.18em;color:var(--navy);background:var(--tint);padding:10px 16px;border-radius:6px;display:inline-block;}
+.build{position:fixed;bottom:8px;right:12px;font-size:11px;color:var(--quiet);z-index:10;}
+.chk{display:flex;align-items:center;gap:9px;margin:7px 0;font-size:15px;}
+.chk input{width:auto;}
+.boatrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;}
+.center{text-align:center;}
+.stack>*+*{margin-top:8px;}
+hr{border:0;border-top:1px solid var(--hair);margin:22px 0;}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="build">P2</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============================================================
+   P2P Sailing — Check-In.  Build P1.
+   ============================================================ */
+
+/* --- CHECK THIS LINE against the URL shown at the top of your
+       Realtime Database data viewer. If your database is not in
+       us-central1 it will look like
+       https://pathway2podium-default-rtdb.<region>.firebasedatabase.app  --- */
+const DATABASE_URL = "https://pathway2podium-default-rtdb.firebaseio.com";
+
+const ARCHITECT = "colinjamesclayton@gmail.com";
+const BUILD = "P2";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCoC9OXeahZ-GshKpRBVpEXJymtvR4ayVw",
+  authDomain: "pathway2podium.firebaseapp.com",
+  databaseURL: DATABASE_URL,
+  projectId: "pathway2podium",
+  storageBucket: "pathway2podium.firebasestorage.app",
+  messagingSenderId: "828644304538",
+  appId: "1:828644304538:web:12fd47eaf2a18f1cff6123"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const DEFAULT_WAIVER = {
+  version: 1,
+  body: "I confirm that I am participating in activities at the P2P Sailing Center voluntarily and at my own risk. I confirm that I am medically fit to sail, that I can swim, and that I will wear a personal flotation device when afloat. I accept responsibility for my own equipment and for any damage I cause to the property of others. I agree to follow the instructions of P2P Sailing Center staff at all times.\n\nThis waiver applies to this and all future visits until P2P Sailing issues a revised version."
+};
+
+/* ---------- state ---------- */
+let S = {
+  user:null, me:null, isAdmin:false, isArchitect:false,
+  groups:{}, users:{}, visits:{}, admins:{}, adminsLoaded:false, waiver:DEFAULT_WAIVER,
+  tab:"board", modal:null, msg:null, onboardStep:null, draft:{}
+};
+const $app = document.getElementById("app");
+
+/* ---------- helpers ---------- */
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ekey = e => String(e||"").toLowerCase().replace(/\./g,",");
+const uid = () => db.ref().push().key;
+const now = () => Date.now();
+
+function fmt(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short"}) + " " +
+         d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+function fmtDay(ts){
+  if(!ts) return "—";
+  return new Date(ts).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+}
+function toLocalInput(ts){
+  if(!ts) return "";
+  const d=new Date(ts), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fromLocalInput(v){ return v ? new Date(v).getTime() : null; }
+function makeCode(){
+  const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s="";
+  for(let i=0;i<6;i++) s+=a[Math.floor(Math.random()*a.length)];
+  return s;
+}
+function flash(text,kind){ S.msg={text,kind:kind||"ok"}; render(); setTimeout(()=>{S.msg=null;render();},4000); }
+
+function groupMembers(gid){
+  if(!gid) return [];
+  return Object.entries(S.users).filter(([id,u])=>u.groupId===gid && u.accountType!=="staff")
+    .map(([id,u])=>Object.assign({id},u));
+}
+function visitsFor(gid){
+  return Object.entries(S.visits).filter(([id,v])=>v.groupId===gid)
+    .map(([id,v])=>Object.assign({id},v));
+}
+function waiverOK(u){
+  return !!(u && u.waiver && u.waiver.version >= (S.waiver.version||1));
+}
+
+/* ---------- data load ---------- */
+function watch(){
+  db.ref("groups").on("value",s=>{S.groups=s.val()||{};render();});
+  db.ref("users").on("value",s=>{S.users=s.val()||{};render();},()=>{});
+  db.ref("visits").on("value",s=>{S.visits=s.val()||{};render();},()=>{});
+  db.ref("admins").on("value",
+    s=>{S.admins=s.val()||{};S.adminsLoaded=true;recomputeAdmin();render();},
+    ()=>{S.adminsLoaded=true;recomputeAdmin();render();});
+  db.ref("waiver").on("value",s=>{S.waiver=s.val()||DEFAULT_WAIVER;render();},()=>{});
+}
+function recomputeAdmin(){
+  const e=(S.user&&S.user.email||"").toLowerCase();
+  S.isArchitect = e===ARCHITECT;
+  S.isAdmin = S.isArchitect || !!S.admins[ekey(e)];
+}
+
+auth.onAuthStateChanged(async u=>{
+  S.user=u;
+  if(!u){ S.me=null; render(); return; }
+  db.ref("users/"+u.uid).on("value",s=>{
+    S.me=s.val();
+    recomputeAdmin();
+    if(!S.me) S.onboardStep = S.onboardStep || "type";
+    render();
+  });
+  watch();
+});
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  if(!S.user){ $app.innerHTML = viewAuth(); return bind(); }
+  if(!S.me){
+    // Wait for the admins list before deciding: a granted admin has no profile
+    // either, and must not be sent down the sailor/coach path.
+    if(!S.adminsLoaded){ $app.innerHTML = chrome(viewLoading()); return bind(); }
+    $app.innerHTML = chrome(S.isAdmin ? viewStaffSetup() : viewOnboard());
+    return bind();
+  }
+  if(S.isAdmin){ $app.innerHTML = chrome(viewAdmin()); return bind(); }
+  if(S.me.status!=="approved"){ $app.innerHTML = chrome(viewPending()); return bind(); }
+  $app.innerHTML = chrome(S.me.accountType==="coach" ? viewCoach() : viewSailor());
+  bind();
+}
+
+function chrome(inner){
+  const e = S.user.email||"";
+  const role = S.isArchitect?"Architect":S.isAdmin?"Admin":(S.me&&S.me.accountType==="coach"?"Coach":"Sailor");
+  return `
+  <div class="topbar">
+    <div class="brand">P2P Sailing<small>PATHWAY2PODIUM · CHECK-IN</small></div>
+    <div class="spacer"></div>
+    <div class="who"><b>${esc(e)}</b>${esc(role)}</div>
+    <button class="iconbtn" data-act="signout">Sign out</button>
+  </div>
+  ${inner}
+  ${S.modal?viewModal():""}`;
+}
+
+function msgHTML(){ return S.msg?`<div class="msg ${S.msg.kind==="err"?"err":"ok"}">${esc(S.msg.text)}</div>`:""; }
+
+/* ---------- auth ---------- */
+function viewAuth(){
+  return `
+  <div class="topbar"><div class="brand">P2P Sailing<small>PATHWAY2PODIUM · CHECK-IN</small></div></div>
+  <div class="narrow">
+    ${msgHTML()}
+    <div class="card">
+      <h2>Sign in</h2>
+      <p class="sub">Visits to the P2P Sailing Center are requested in advance. Create an account to register yourself or your squad.</p>
+      <button class="btn" data-act="google" style="width:100%">Continue with Google</button>
+      <hr>
+      <label for="ae">Email</label><input type="email" id="ae" autocomplete="email">
+      <label for="ap">Password</label><input type="password" id="ap" autocomplete="current-password">
+      <div class="actions">
+        <button class="btn" data-act="signin">Sign in</button>
+        <button class="btn ghost" data-act="signup">Create account</button>
+      </div>
+      <p class="hint">Six characters or more for a new password.</p>
+    </div>
+  </div>`;
+}
+
+/* ---------- staff setup (admins and the Architect) ---------- */
+function viewLoading(){
+  return `<div class="narrow"><div class="card center"><p class="sub" style="margin:0">Loading…</p></div></div>`;
+}
+
+function viewStaffSetup(){
+  return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Staff account</h2>
+      <p class="sub">You have admin access${S.isArchitect?" as the Architect":""}. Staff accounts are not part of any group and never appear on a roster, an attendee list or the export.</p>
+      <label>Your name</label><input type="text" id="st_name" placeholder="Shown on the audit trail">
+      <div class="actions"><button class="btn" data-act="staffsave">Continue to the board</button></div>
+    </div></div>`;
+}
+
+/* ---------- onboarding ---------- */
+function viewOnboard(){
+  const step = S.onboardStep||"type";
+  if(step==="type") return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Are you a sailor or a coach?</h2>
+      <p class="sub">This is permanent — the two collect different details. Coaches can register a squad and request visits for it.</p>
+      <div class="actions">
+        <button class="btn" data-act="type" data-v="sailor">I am a sailor</button>
+        <button class="btn" data-act="type" data-v="coach">I am a coach</button>
+      </div>
+    </div></div>`;
+
+  if(step==="profile"){
+    const c = S.draft.accountType==="coach";
+    return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Your details</h2>
+      <p class="sub">All fields are required unless marked optional.</p>
+      <label>Full name</label><input type="text" id="p_name" value="${esc(S.draft.name||"")}">
+      ${c?"":`<label>Date of birth</label><input type="date" id="p_dob" value="${esc(S.draft.dob||"")}">`}
+      <div class="row">
+        <div><label>Phone</label><input type="tel" id="p_phone" value="${esc(S.draft.phone||"")}"></div>
+        <div><label>Email</label><input type="email" id="p_email" value="${esc(S.draft.email||S.user.email||"")}"></div>
+      </div>
+      <label>Postal address</label><textarea id="p_addr">${esc(S.draft.address||"")}</textarea>
+      <label>Federation</label><input type="text" id="p_fed" placeholder="US Sailing, RYA, FFVoile…" value="${esc(S.draft.federation||"")}">
+      ${c?`
+      <div class="row">
+        <div><label>Certification</label><input type="text" id="p_cert" placeholder="Level or qualification" value="${esc(S.draft.certification||"")}"></div>
+        <div><label>Role</label><select id="p_role">
+          <option value="Head coach">Head coach</option><option value="Assistant coach">Assistant coach</option><option value="Support">Support</option>
+        </select></div>
+      </div>`:`
+      <div class="row">
+        <div><label>Sail number</label><input type="text" id="p_sail" value="${esc(S.draft.sailNumber||"")}"></div>
+        <div><label>Boat class</label><input type="text" id="p_class" value="${esc(S.draft.boatClass||"")}"></div>
+      </div>`}
+      <hr>
+      <h3 style="font-size:15px;color:var(--navy-soft)">Emergency contact</h3>
+      <div class="row">
+        <div><label>Name</label><input type="text" id="p_ecn" value="${esc(S.draft.ecName||"")}"></div>
+        <div><label>Relationship</label><input type="text" id="p_ecr" value="${esc(S.draft.ecRel||"")}"></div>
+      </div>
+      <label>Phone</label><input type="tel" id="p_ecp" value="${esc(S.draft.ecPhone||"")}">
+      <div class="actions"><button class="btn" data-act="profile-next">Continue to waiver</button></div>
+    </div></div>`;
+  }
+
+  if(step==="waiver") return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Waiver</h2>
+      <p class="sub">Signed once. It carries forward to every future visit.</p>
+      <div style="background:var(--tint);padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6">${esc(S.waiver.body)}</div>
+      <label>Type your full name to sign</label><input type="text" id="w_sig" placeholder="${esc(S.draft.name||"")}">
+      <div class="actions"><button class="btn go" data-act="sign">Sign waiver</button></div>
+    </div></div>`;
+
+  if(step==="group") return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Your group</h2>
+      <p class="sub">Squads travel as a group. If you are coming alone, create a group with your own name.</p>
+      <label>Join an existing group</label>
+      <input type="text" id="g_code" placeholder="6-character code from your coach" style="text-transform:uppercase">
+      <div class="actions"><button class="btn" data-act="joingroup">Join group</button></div>
+      <hr>
+      <label>Or create a new one</label>
+      <input type="text" id="g_name" placeholder="Group or squad name">
+      <div class="row" style="margin-top:12px">
+        <div><label>Federation</label><input type="text" id="g_fed" value="${esc(S.draft.federation||"")}"></div>
+        <div><label>Country</label><input type="text" id="g_country" placeholder="USA, GBR, FRA…"></div>
+      </div>
+      <div class="actions"><button class="btn" data-act="newgroup">Create group</button></div>
+    </div></div>`;
+  return "";
+}
+
+function viewPending(){
+  const g = S.groups[S.me.groupId];
+  return `<div class="narrow">${msgHTML()}
+    <div class="card center">
+      <h2>Waiting for approval</h2>
+      <p class="sub">A P2P admin reviews every new account. You will be able to appear on visit requests once yours is approved.</p>
+      <p><span class="pill warn">Pending</span></p>
+      ${g?`<p class="hint">Group: <strong>${esc(g.name)}</strong>${g.federation?" · "+esc(g.federation):""}</p>`:""}
+      ${g&&S.me.accountType==="coach"?`<p class="hint" style="margin-top:14px">Your group's join code<br><span class="code">${esc(g.joinCode)}</span></p>`:""}
+    </div></div>`;
+}
+
+/* ---------- sailor ---------- */
+function viewSailor(){
+  const g=S.groups[S.me.groupId]||{};
+  const vs=visitsFor(S.me.groupId).filter(v=>v.members&&v.members[S.user.uid]).sort((a,b)=>(a.requestedArrival||0)-(b.requestedArrival||0));
+  return `<div class="wrap">${msgHTML()}
+    <div class="card">
+      <h2>${esc(S.me.name)}</h2>
+      <p class="sub">${esc(g.name||"No group")}${g.federation?" · "+esc(g.federation):""}</p>
+      <table class="list"><tbody>
+        <tr><td style="width:170px;color:var(--quiet)">Sail number</td><td>${esc(S.me.sailNumber||"—")}</td></tr>
+        <tr><td style="color:var(--quiet)">Boat class</td><td>${esc(S.me.boatClass||"—")}</td></tr>
+        <tr><td style="color:var(--quiet)">Phone</td><td>${esc(S.me.phone||"—")}</td></tr>
+        <tr><td style="color:var(--quiet)">Emergency contact</td><td>${esc(S.me.ecName||"—")}${S.me.ecPhone?" · "+esc(S.me.ecPhone):""}</td></tr>
+        <tr><td style="color:var(--quiet)">Waiver</td><td>${waiverOK(S.me)?`<span class="pill ok">Signed</span> version ${S.me.waiver.version}, ${fmtDay(S.me.waiver.signedAt)}`:`<span class="pill bad">Re-sign needed</span> <button class="btn sm ghost" data-act="resign">Sign now</button>`}</td></tr>
+      </tbody></table>
+      <p class="hint" style="margin-top:14px">Details are maintained by P2P staff. Ask an admin to change anything here.</p>
+    </div>
+    <div class="card">
+      <h2>My visits</h2>
+      <p class="sub">${vs.length?"":"You are not on any visit requests yet."}</p>
+      ${vs.map(v=>visitRow(v,false)).join("")}
+    </div></div>`;
+}
+
+/* ---------- coach ---------- */
+function viewCoach(){
+  const gid=S.me.groupId, g=S.groups[gid]||{};
+  const mem=groupMembers(gid), vs=visitsFor(gid).sort((a,b)=>(b.requestedArrival||0)-(a.requestedArrival||0));
+  return `<div class="wrap">${msgHTML()}
+    <div class="card">
+      <h2>${esc(g.name||"—")}</h2>
+      <p class="sub">${esc(g.federation||"No federation")}${g.country?" · "+esc(g.country):""} · ${mem.length} member${mem.length===1?"":"s"}</p>
+      <p>Join code for your sailors: <span class="code">${esc(g.joinCode||"—")}</span></p>
+      <div class="actions"><button class="btn" data-act="newvisit">Request a visit</button></div>
+    </div>
+    <div class="card">
+      <h2>Roster</h2>
+      <p class="sub">Read-only. Ask a P2P admin to correct anything.</p>
+      <table class="list"><thead><tr><th>Name</th><th>Role</th><th>Boat</th><th>Waiver</th><th>Account</th></tr></thead><tbody>
+      ${mem.map(m=>`<tr>
+        <td><strong>${esc(m.name)}</strong><br><span style="color:var(--quiet);font-size:13px">${esc(m.email||"")}</span></td>
+        <td>${m.accountType==="coach"?esc(m.role||"Coach"):"Sailor"}</td>
+        <td>${esc([m.boatClass,m.sailNumber].filter(Boolean).join(" ")||"—")}</td>
+        <td>${waiverOK(m)?'<span class="pill ok">Signed</span>':'<span class="pill bad">No</span>'}</td>
+        <td>${m.status==="approved"?'<span class="pill ok">Approved</span>':'<span class="pill warn">Pending</span>'}</td>
+      </tr>`).join("")||`<tr><td colspan="5" style="color:var(--quiet)">No members yet.</td></tr>`}
+      </tbody></table>
+    </div>
+    <div class="card">
+      <h2>Visits</h2>
+      <p class="sub">${vs.length?"":"No visits requested yet."}</p>
+      ${vs.map(v=>visitRow(v,true)).join("")}
+    </div></div>`;
+}
+
+function visitRow(v,coach){
+  const st={requested:["wait","Requested"],approved:["up","Approved"],onsite:["on","On site"],departed:["off","Departed"],declined:["no","Declined"],cancelled:["no","Cancelled"]}[v.status]||["off",v.status];
+  const a=v.approvedArrival||v.requestedArrival, d=v.approvedDeparture||v.requestedDeparture;
+  const n=v.members?Object.keys(v.members).length:0;
+  return `<div class="grp">
+    <div class="main"><div class="nm"><span class="dot ${st[0]}"></span>${st[1]}</div>
+      <div class="meta">${n} attending${v.boats&&v.boats.length?" · "+v.boats.length+" boat"+(v.boats.length===1?"":"s"):""}</div></div>
+    <div class="dates">${fmtDay(a)} → ${fmtDay(d)}</div>
+    ${coach&&(v.status==="requested"||v.status==="approved")?`<button class="btn sm ghost" data-act="cancelvisit" data-id="${v.id}">Cancel</button>`:""}
+  </div>`;
+}
+
+/* ---------- admin ---------- */
+function viewAdmin(){
+  const tabs=[["board","Board"],["groups","Groups"],["people","People"],["settings","Settings"]];
+  return `<div class="wrap">${msgHTML()}
+    <div class="tabs">${tabs.map(t=>`<button data-act="tab" data-v="${t[0]}" class="${S.tab===t[0]?"sel":""}">${t[1]}</button>`).join("")}</div>
+    ${S.tab==="board"?adminBoard():S.tab==="groups"?adminGroups():S.tab==="people"?adminPeople():adminSettings()}
+  </div>`;
+}
+
+function adminBoard(){
+  const all=Object.entries(S.visits).map(([id,v])=>Object.assign({id},v));
+  const pend=all.filter(v=>v.status==="requested").sort((a,b)=>(a.requestedArrival||0)-(b.requestedArrival||0));
+  const on=all.filter(v=>v.status==="onsite").sort((a,b)=>(a.approvedDeparture||0)-(b.approvedDeparture||0));
+  const up=all.filter(v=>v.status==="approved").sort((a,b)=>(a.approvedArrival||0)-(b.approvedArrival||0));
+  const pendUsers=Object.entries(S.users).filter(([id,u])=>u.status!=="approved"&&u.accountType!=="staff").length;
+  return `
+  ${pendUsers?`<div class="msg" style="background:var(--tint);color:var(--navy)">${pendUsers} account${pendUsers===1?"":"s"} waiting for approval — see the People tab.</div>`:""}
+  ${boardSection("Pending requests",pend,"Nothing waiting on a decision.","pend")}
+  ${boardSection("On site now",on,"Nobody is checked in.","on")}
+  ${boardSection("Upcoming",up,"No approved arrivals.","up")}`;
+}
+
+function boardSection(title,list,emptyText,mode){
+  return `<div class="boardsec">
+    <h2>${title}</h2>
+    <p class="count">${list.length} group${list.length===1?"":"s"}</p>
+    ${list.length?list.map(v=>adminVisitRow(v,mode)).join(""):`<div class="empty">${emptyText}</div>`}
+  </div>`;
+}
+
+function adminVisitRow(v,mode){
+  const g=S.groups[v.groupId]||{};
+  const n=v.members?Object.keys(v.members).length:0;
+  const boats=v.boats&&v.boats.length?v.boats.length+" boat"+(v.boats.length===1?"":"s"):"no boats listed";
+  const a=v.approvedArrival||v.requestedArrival, d=v.approvedDeparture||v.requestedDeparture;
+  const overdue = mode==="on" && d && d<now();
+  let right="";
+  if(mode==="pend") right=`
+    <button class="btn sm go" data-act="approve" data-id="${v.id}">Approve</button>
+    <button class="btn sm ghost" data-act="amend" data-id="${v.id}">Amend</button>
+    <button class="btn sm stop" data-act="decline" data-id="${v.id}">Decline</button>`;
+  if(mode==="up") right=`<button class="btn sm go" data-act="checkin" data-id="${v.id}">Check in</button>
+    <button class="btn sm ghost" data-act="amend" data-id="${v.id}">Amend</button>`;
+  if(mode==="on") right=`<button class="btn sm" data-act="checkout" data-id="${v.id}">Check out</button>`;
+  return `<div class="grp">
+    <div class="main" data-act="group" data-id="${v.groupId}">
+      <div class="nm">${esc(g.name||"Unknown group")}</div>
+      <div class="meta">${esc(g.federation||"—")} · ${n} people · ${boats}</div>
+    </div>
+    <div class="dates ${overdue?"late":""}">${fmtDay(a)} → ${fmtDay(d)}${overdue?" · overdue":""}</div>
+    ${right}
+  </div>`;
+}
+
+function adminGroups(){
+  const gs=Object.entries(S.groups).map(([id,g])=>Object.assign({id},g))
+    .sort((a,b)=>String(a.federation||"").localeCompare(String(b.federation||""))||String(a.name).localeCompare(String(b.name)));
+  return `<div class="card">
+    <h2>All groups</h2><p class="sub">${gs.length} registered.</p>
+    ${gs.map(g=>{
+      const m=groupMembers(g.id).length;
+      return `<div class="grp"><div class="main" data-act="group" data-id="${g.id}">
+        <div class="nm">${esc(g.name)}</div>
+        <div class="meta">${esc(g.federation||"—")}${g.country?" · "+esc(g.country):""} · ${m} member${m===1?"":"s"} · code ${esc(g.joinCode||"—")}</div>
+      </div></div>`;
+    }).join("")||`<div class="empty">No groups yet.</div>`}
+  </div>`;
+}
+
+function adminPeople(){
+  const people=Object.entries(S.users).filter(([id,u])=>u.accountType!=="staff");
+  const pending=people.filter(([id,u])=>u.status!=="approved").map(([id,u])=>Object.assign({id},u));
+  const approved=people.filter(([id,u])=>u.status==="approved").map(([id,u])=>Object.assign({id},u))
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const staff=Object.entries(S.users).filter(([id,u])=>u.accountType==="staff").map(([id,u])=>Object.assign({id},u));
+  return `
+  <div class="card">
+    <h2>Waiting for approval</h2><p class="sub">${pending.length} account${pending.length===1?"":"s"}.</p>
+    ${pending.map(u=>{const g=S.groups[u.groupId]||{};return `<div class="grp">
+      <div class="main" data-act="person" data-id="${u.id}"><div class="nm">${esc(u.name)}</div>
+      <div class="meta">${u.accountType==="coach"?"Coach":"Sailor"} · ${esc(g.name||"no group")} · ${esc(u.federation||"—")} · ${waiverOK(u)?"waiver signed":"<span style='color:var(--port)'>no waiver</span>"}</div></div>
+      <button class="btn sm go" data-act="approveuser" data-id="${u.id}">Approve</button>
+      <button class="btn sm ghost" data-act="person" data-id="${u.id}">View</button>
+    </div>`;}).join("")||`<div class="empty">Nothing waiting.</div>`}
+  </div>
+  <div class="card">
+    <h2>Everyone</h2><p class="sub">${approved.length} approved.</p>
+    <table class="list"><thead><tr><th>Name</th><th>Type</th><th>Group</th><th>Waiver</th><th></th></tr></thead><tbody>
+    ${approved.map(u=>{const g=S.groups[u.groupId]||{};return `<tr>
+      <td><strong>${esc(u.name)}</strong><br><span style="color:var(--quiet);font-size:13px">${esc(u.email||"")}</span></td>
+      <td>${u.accountType==="coach"?"Coach":"Sailor"}</td><td>${esc(g.name||"—")}</td>
+      <td>${waiverOK(u)?'<span class="pill ok">v'+u.waiver.version+'</span>':'<span class="pill bad">behind</span>'}</td>
+      <td><button class="btn sm ghost" data-act="person" data-id="${u.id}">Edit</button></td></tr>`;}).join("")}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Staff</h2><p class="sub">Not part of any group, and left out of rosters, attendee lists and the export.</p>
+    <table class="list"><tbody>
+    ${staff.map(u=>`<tr><td><strong>${esc(u.name)}</strong></td><td style="color:var(--quiet)">${esc(u.email||"")}</td>
+      <td style="text-align:right"><span class="pill">${u.email&&u.email.toLowerCase()===ARCHITECT?"Architect":"Admin"}</span></td></tr>`).join("")}
+    </tbody></table>
+  </div>`;
+}
+
+function adminSettings(){
+  const admins=Object.keys(S.admins);
+  return `
+  <div class="card">
+    <h2>Export the register</h2><p class="sub">One row per person per visit. CSV.</p>
+    <div class="row">
+      <div><label>From</label><input type="date" id="x_from"></div>
+      <div><label>To</label><input type="date" id="x_to"></div>
+    </div>
+    <div class="actions"><button class="btn" data-act="export">Download CSV</button></div>
+  </div>
+  <div class="card">
+    <h2>Admins</h2><p class="sub">Granted by email address. The Architect is permanent.</p>
+    <table class="list"><tbody>
+      <tr><td><strong>${esc(ARCHITECT)}</strong></td><td style="text-align:right"><span class="pill">Architect</span></td></tr>
+      ${admins.map(k=>`<tr><td>${esc(k.replace(/,/g,"."))}</td><td style="text-align:right">${S.isArchitect?`<button class="btn sm ghost" data-act="rmadmin" data-id="${k}">Remove</button>`:'<span class="pill">Admin</span>'}</td></tr>`).join("")}
+    </tbody></table>
+    ${S.isArchitect?`<label>Add an admin</label><input type="email" id="ad_email" placeholder="name@example.org">
+      <div class="actions"><button class="btn" data-act="addadmin">Grant admin</button></div>`:""}
+  </div>
+  <div class="card">
+    <h2>Waiver text</h2><p class="sub">Current version ${S.waiver.version}. Saving a new version flags everyone who signed an older one.</p>
+    <textarea id="wv_body" style="min-height:220px">${esc(S.waiver.body)}</textarea>
+    <div class="actions">
+      <button class="btn ghost" data-act="savewaiver">Save without changing version</button>
+      <button class="btn" data-act="bumpwaiver">Save as version ${(S.waiver.version||1)+1}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- modals ---------- */
+function viewModal(){
+  const m=S.modal;
+  let body="";
+  if(m.kind==="group") body=modalGroup(m.id);
+  if(m.kind==="person") body=modalPerson(m.id);
+  if(m.kind==="amend") body=modalAmend(m.id);
+  if(m.kind==="newvisit") body=modalNewVisit();
+  return `<div class="scrim" data-act="scrim"><div class="modal">${body}</div></div>`;
+}
+
+function modalGroup(gid){
+  const g=S.groups[gid]||{}, mem=groupMembers(gid), vs=visitsFor(gid).sort((a,b)=>(b.requestedArrival||0)-(a.requestedArrival||0));
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>${esc(g.name)}</h2>
+  <p class="sub">${esc(g.federation||"—")}${g.country?" · "+esc(g.country):""} · join code ${esc(g.joinCode||"—")}</p>
+  <h3 style="margin:18px 0 8px;font-size:14px;color:var(--navy-soft)">Roster</h3>
+  <table class="list"><thead><tr><th>Name</th><th>Contact</th><th>Boat</th><th>Emergency</th><th>Waiver</th></tr></thead><tbody>
+  ${mem.map(m=>`<tr>
+    <td><strong>${esc(m.name)}</strong><br><span style="color:var(--quiet);font-size:12px">${m.accountType==="coach"?esc(m.role||"Coach"):"Sailor"}</span></td>
+    <td style="font-size:13px">${esc(m.email||"")}<br>${esc(m.phone||"")}</td>
+    <td>${esc([m.boatClass,m.sailNumber].filter(Boolean).join(" ")||"—")}</td>
+    <td style="font-size:13px">${esc(m.ecName||"—")}<br>${esc(m.ecPhone||"")}</td>
+    <td>${waiverOK(m)?'<span class="pill ok">v'+m.waiver.version+'</span>':'<span class="pill bad">no</span>'}</td>
+  </tr>`).join("")||`<tr><td colspan="5" style="color:var(--quiet)">No members.</td></tr>`}
+  </tbody></table>
+  <h3 style="margin:22px 0 8px;font-size:14px;color:var(--navy-soft)">Visits</h3>
+  ${vs.map(v=>{
+    const a=v.approvedArrival||v.requestedArrival,d=v.approvedDeparture||v.requestedDeparture;
+    return `<div class="grp"><div class="main"><div class="nm">${esc(v.status)}</div>
+      <div class="meta">${fmt(a)} → ${fmt(d)}${v.actualArrival?" · in "+fmt(v.actualArrival):""}${v.actualDeparture?" · out "+fmt(v.actualDeparture):""}</div></div>
+      <button class="btn sm ghost" data-act="amend" data-id="${v.id}">Edit dates</button></div>`;
+  }).join("")||`<div class="empty">No visits.</div>`}`;
+}
+
+function modalPerson(id){
+  const u=S.users[id]||{}, c=u.accountType==="coach";
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>${esc(u.name)}</h2><p class="sub">${c?"Coach":"Sailor"} · ${esc(u.email||"")}</p>
+  <input type="hidden" id="ed_id" value="${esc(id)}">
+  <label>Full name</label><input type="text" id="ed_name" value="${esc(u.name||"")}">
+  <div class="row">
+    <div><label>Phone</label><input type="tel" id="ed_phone" value="${esc(u.phone||"")}"></div>
+    <div><label>Federation</label><input type="text" id="ed_fed" value="${esc(u.federation||"")}"></div>
+  </div>
+  <label>Postal address</label><textarea id="ed_addr">${esc(u.address||"")}</textarea>
+  ${c?`<div class="row">
+    <div><label>Certification</label><input type="text" id="ed_cert" value="${esc(u.certification||"")}"></div>
+    <div><label>Role</label><input type="text" id="ed_role" value="${esc(u.role||"")}"></div></div>`
+   :`<div class="row">
+    <div><label>Sail number</label><input type="text" id="ed_sail" value="${esc(u.sailNumber||"")}"></div>
+    <div><label>Boat class</label><input type="text" id="ed_class" value="${esc(u.boatClass||"")}"></div></div>
+    <label>Date of birth</label><input type="date" id="ed_dob" value="${esc(u.dob||"")}">`}
+  <div class="row">
+    <div><label>Emergency contact</label><input type="text" id="ed_ecn" value="${esc(u.ecName||"")}"></div>
+    <div><label>Emergency phone</label><input type="tel" id="ed_ecp" value="${esc(u.ecPhone||"")}"></div>
+  </div>
+  <p class="hint" style="margin-top:14px">Waiver: ${u.waiver?`version ${u.waiver.version}, signed ${fmt(u.waiver.signedAt)} as “${esc(u.waiver.signature)}”`:"not signed"}</p>
+  <div class="actions">
+    <button class="btn" data-act="saveperson">Save changes</button>
+    ${u.status!=="approved"?`<button class="btn go" data-act="approveuser" data-id="${id}">Approve account</button>`:""}
+    <button class="btn ghost" data-act="close">Close</button>
+  </div>`;
+}
+
+function modalAmend(vid){
+  const v=S.visits[vid]||{};
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Approved dates</h2>
+  <p class="sub">Requested: ${fmt(v.requestedArrival)} → ${fmt(v.requestedDeparture)}</p>
+  <input type="hidden" id="am_id" value="${esc(vid)}">
+  <div class="row">
+    <div><label>Arrival</label><input type="datetime-local" id="am_a" value="${toLocalInput(v.approvedArrival||v.requestedArrival)}"></div>
+    <div><label>Departure</label><input type="datetime-local" id="am_d" value="${toLocalInput(v.approvedDeparture||v.requestedDeparture)}"></div>
+  </div>
+  <div class="actions"><button class="btn go" data-act="saveamend">Save${v.status==="requested"?" and approve":""}</button>
+  <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+function modalNewVisit(){
+  const mem=groupMembers(S.me.groupId);
+  const boats=S.draft.boats||[{cls:"",sail:""}];
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Request a visit</h2><p class="sub">An admin approves it before arrival. They may amend the dates.</p>
+  <div class="row">
+    <div><label>Arrival</label><input type="datetime-local" id="nv_a"></div>
+    <div><label>Departure</label><input type="datetime-local" id="nv_d"></div>
+  </div>
+  <label>Who is attending</label>
+  ${mem.map(m=>`<div class="chk"><input type="checkbox" class="nv_m" value="${esc(m.id)}" id="m_${esc(m.id)}" ${m.status==="approved"&&waiverOK(m)?"checked":"disabled"}>
+    <label for="m_${esc(m.id)}" style="margin:0;font-weight:400;color:var(--ink)">${esc(m.name)}${m.status!=="approved"?" — account pending":!waiverOK(m)?" — waiver not signed":""}</label></div>`).join("")}
+  <label style="margin-top:18px">Boats</label>
+  <div id="boatlist">${boats.map((b,i)=>`<div class="boatrow">
+    <input type="text" class="nv_bc" placeholder="Class" value="${esc(b.cls)}">
+    <input type="text" class="nv_bs" placeholder="Sail number" value="${esc(b.sail)}">
+    <button class="btn sm ghost" data-act="rmboat" data-i="${i}">−</button></div>`).join("")}</div>
+  <button class="btn sm ghost" data-act="addboat">Add a boat</button>
+  <label style="margin-top:18px">Vehicles and trailers (optional)</label>
+  <input type="text" id="nv_veh" placeholder="Van and two-boat trailer">
+  <div class="actions"><button class="btn" data-act="submitvisit">Submit request</button>
+  <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function bind(){
+  $app.querySelectorAll("[data-act]").forEach(el=>{
+    el.onclick = ev=>{ ev.stopPropagation(); handle(el.dataset.act, el); };
+  });
+}
+const val = id => { const e=document.getElementById(id); return e?e.value.trim():""; };
+
+async function handle(act,el){
+  try{
+    /* auth */
+    if(act==="google"){ await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); return; }
+    if(act==="signin"){ await auth.signInWithEmailAndPassword(val("ae"),val("ap")); return; }
+    if(act==="signup"){ await auth.createUserWithEmailAndPassword(val("ae"),val("ap")); return; }
+    if(act==="signout"){ S.onboardStep=null; S.draft={}; await auth.signOut(); location.reload(); return; }
+
+    /* staff */
+    if(act==="staffsave"){
+      const name=val("st_name");
+      if(!name) return flash("Enter your name.","err");
+      await db.ref("users/"+S.user.uid).set({
+        accountType:"staff", status:"approved", name,
+        email:S.user.email, createdAt:now()
+      });
+      return;
+    }
+
+    /* onboarding */
+    if(act==="type"){ S.draft.accountType=el.dataset.v; S.onboardStep="profile"; return render(); }
+    if(act==="profile-next"){
+      const d=S.draft;
+      d.name=val("p_name"); d.phone=val("p_phone"); d.email=val("p_email")||S.user.email;
+      d.address=val("p_addr"); d.federation=val("p_fed");
+      d.ecName=val("p_ecn"); d.ecRel=val("p_ecr"); d.ecPhone=val("p_ecp");
+      if(d.accountType==="coach"){ d.certification=val("p_cert"); d.role=val("p_role"); }
+      else { d.dob=val("p_dob"); d.sailNumber=val("p_sail"); d.boatClass=val("p_class"); }
+      if(!d.name||!d.phone||!d.email||!d.address||!d.federation||!d.ecName||!d.ecPhone)
+        return flash("Fill in every field before continuing.","err");
+      S.onboardStep="waiver"; return render();
+    }
+    if(act==="sign"){
+      const sig=val("w_sig");
+      if(sig.toLowerCase()!==String(S.draft.name||"").toLowerCase())
+        return flash("The signature must match the name on your profile.","err");
+      S.draft.waiver={version:S.waiver.version||1,signedAt:now(),signature:sig};
+      S.onboardStep="group"; return render();
+    }
+    if(act==="newgroup"){
+      const name=val("g_name"); if(!name) return flash("Give the group a name.","err");
+      const gid=uid(), code=makeCode();
+      await db.ref("groups/"+gid).set({
+        name, federation:val("g_fed")||S.draft.federation||"", country:val("g_country")||"",
+        joinCode:code, createdBy:S.user.uid, createdAt:now(),
+        headCoachUid: S.draft.accountType==="coach"?S.user.uid:null
+      });
+      await db.ref("joinCodes/"+code).set(gid);
+      return finishSignup(gid);
+    }
+    if(act==="joingroup"){
+      const code=val("g_code").toUpperCase(); if(!code) return flash("Enter a join code.","err");
+      const snap=await db.ref("joinCodes/"+code).get();
+      if(!snap.exists()) return flash("No group with that code.","err");
+      return finishSignup(snap.val());
+    }
+    if(act==="resign"){
+      await db.ref("users/"+S.user.uid+"/waiver").set({version:S.waiver.version,signedAt:now(),signature:S.me.name});
+      return flash("Waiver signed.");
+    }
+
+    /* coach */
+    if(act==="newvisit"){ S.draft.boats=[{cls:S.me.boatClass||"",sail:""}]; S.modal={kind:"newvisit"}; return render(); }
+    if(act==="addboat"){ readBoats(); S.draft.boats.push({cls:"",sail:""}); return render(); }
+    if(act==="rmboat"){ readBoats(); S.draft.boats.splice(+el.dataset.i,1); if(!S.draft.boats.length)S.draft.boats=[{cls:"",sail:""}]; return render(); }
+    if(act==="submitvisit"){
+      const a=fromLocalInput(val("nv_a")), d=fromLocalInput(val("nv_d"));
+      if(!a||!d) return flash("Set both dates.","err");
+      if(d<=a) return flash("Departure must be after arrival.","err");
+      const members={};
+      document.querySelectorAll(".nv_m:checked").forEach(c=>members[c.value]=true);
+      if(!Object.keys(members).length) return flash("Select at least one person.","err");
+      readBoats();
+      const vid=uid();
+      await db.ref("visits/"+vid).set({
+        groupId:S.me.groupId, requestedArrival:a, requestedDeparture:d,
+        members, boats:S.draft.boats.filter(b=>b.cls||b.sail), vehicles:val("nv_veh"),
+        status:"requested", createdBy:S.user.uid, createdAt:now(),
+        audit:[{at:now(),by:S.user.email,what:"requested"}]
+      });
+      S.modal=null; return flash("Visit requested. An admin will review it.");
+    }
+    if(act==="cancelvisit"){
+      if(!confirm("Cancel this visit request?")) return;
+      await setStatus(el.dataset.id,"cancelled");
+      return flash("Visit cancelled.");
+    }
+
+    /* admin */
+    if(act==="tab"){ S.tab=el.dataset.v; return render(); }
+    if(act==="group"){ S.modal={kind:"group",id:el.dataset.id}; return render(); }
+    if(act==="person"){ S.modal={kind:"person",id:el.dataset.id}; return render(); }
+    if(act==="amend"){ S.modal={kind:"amend",id:el.dataset.id}; return render(); }
+    if(act==="close"||act==="scrim"){ if(act==="scrim"&&el!==event.target) return; S.modal=null; return render(); }
+
+    if(act==="approve"){
+      const v=S.visits[el.dataset.id];
+      await db.ref("visits/"+el.dataset.id).update({
+        approvedArrival:v.approvedArrival||v.requestedArrival,
+        approvedDeparture:v.approvedDeparture||v.requestedDeparture,
+        status:"approved", audit:(v.audit||[]).concat([{at:now(),by:S.user.email,what:"approved"}])
+      });
+      return flash("Approved.");
+    }
+    if(act==="decline"){
+      if(!confirm("Decline this request?")) return;
+      await setStatus(el.dataset.id,"declined"); return flash("Declined.");
+    }
+    if(act==="checkin"){ 
+      await db.ref("visits/"+el.dataset.id).update({status:"onsite",actualArrival:now(),
+        audit:(S.visits[el.dataset.id].audit||[]).concat([{at:now(),by:S.user.email,what:"checked in"}])});
+      return flash("Checked in.");
+    }
+    if(act==="checkout"){
+      await db.ref("visits/"+el.dataset.id).update({status:"departed",actualDeparture:now(),
+        audit:(S.visits[el.dataset.id].audit||[]).concat([{at:now(),by:S.user.email,what:"checked out"}])});
+      return flash("Checked out.");
+    }
+    if(act==="saveamend"){
+      const id=val("am_id"), v=S.visits[id];
+      const a=fromLocalInput(val("am_a")), d=fromLocalInput(val("am_d"));
+      if(!a||!d||d<=a) return flash("Check the dates.","err");
+      const patch={approvedArrival:a,approvedDeparture:d,
+        audit:(v.audit||[]).concat([{at:now(),by:S.user.email,what:"dates amended"}])};
+      if(v.status==="requested") patch.status="approved";
+      await db.ref("visits/"+id).update(patch);
+      S.modal=null; return flash("Dates saved.");
+    }
+    if(act==="approveuser"){
+      await db.ref("users/"+el.dataset.id+"/status").set("approved");
+      if(S.modal) S.modal=null;
+      return flash("Account approved.");
+    }
+    if(act==="saveperson"){
+      const id=val("ed_id"), u=S.users[id]||{};
+      const p={name:val("ed_name"),phone:val("ed_phone"),federation:val("ed_fed"),address:val("ed_addr"),
+        ecName:val("ed_ecn"),ecPhone:val("ed_ecp")};
+      if(u.accountType==="coach"){p.certification=val("ed_cert");p.role=val("ed_role");}
+      else {p.sailNumber=val("ed_sail");p.boatClass=val("ed_class");p.dob=val("ed_dob");}
+      await db.ref("users/"+id).update(p);
+      S.modal=null; return flash("Saved.");
+    }
+    if(act==="addadmin"){
+      const e=val("ad_email").toLowerCase(); if(!e) return;
+      await db.ref("admins/"+ekey(e)).set(true); return flash("Admin granted to "+e);
+    }
+    if(act==="rmadmin"){
+      await db.ref("admins/"+el.dataset.id).remove(); return flash("Admin removed.");
+    }
+    if(act==="savewaiver"){
+      await db.ref("waiver").set({version:S.waiver.version||1,body:val("wv_body")});
+      return flash("Waiver text saved.");
+    }
+    if(act==="bumpwaiver"){
+      if(!confirm("Everyone who signed the old version will be flagged for a re-sign. Continue?")) return;
+      await db.ref("waiver").set({version:(S.waiver.version||1)+1,body:val("wv_body")});
+      return flash("New waiver version published.");
+    }
+    if(act==="export") return exportCSV();
+
+  }catch(err){
+    flash(err.message||String(err),"err");
+  }
+}
+
+function readBoats(){
+  const cls=[...document.querySelectorAll(".nv_bc")].map(i=>i.value.trim());
+  const sail=[...document.querySelectorAll(".nv_bs")].map(i=>i.value.trim());
+  S.draft.boats=cls.map((c,i)=>({cls:c,sail:sail[i]||""}));
+}
+
+async function setStatus(id,status){
+  const v=S.visits[id]||{};
+  await db.ref("visits/"+id).update({status,audit:(v.audit||[]).concat([{at:now(),by:S.user.email,what:status}])});
+}
+
+async function finishSignup(gid){
+  const d=S.draft;
+  const rec={
+    accountType:d.accountType, email:d.email||S.user.email, name:d.name, phone:d.phone,
+    address:d.address, federation:d.federation, ecName:d.ecName, ecRel:d.ecRel, ecPhone:d.ecPhone,
+    waiver:d.waiver, groupId:gid, status:"pending", createdAt:now()
+  };
+  if(d.accountType==="coach"){ rec.certification=d.certification; rec.role=d.role; }
+  else { rec.dob=d.dob; rec.sailNumber=d.sailNumber; rec.boatClass=d.boatClass; }
+  await db.ref("users/"+S.user.uid).set(rec);
+  S.onboardStep=null; S.draft={};
+  render();
+}
+
+function exportCSV(){
+  const from = val("x_from")?new Date(val("x_from")).getTime():0;
+  const to   = val("x_to")?new Date(val("x_to")).getTime()+86400000:Infinity;
+  const rows=[["Federation","Group","Name","Type","Email","Phone","Address","Boat class","Sail number",
+    "Emergency contact","Emergency phone","Status","Approved arrival","Approved departure","Actual arrival","Actual departure","Waiver version","Waiver signed"]];
+  Object.entries(S.visits).forEach(([vid,v])=>{
+    const t=v.approvedArrival||v.requestedArrival||0;
+    if(t<from||t>to) return;
+    const g=S.groups[v.groupId]||{};
+    Object.keys(v.members||{}).forEach(uid2=>{
+      const u=S.users[uid2]||{};
+      rows.push([g.federation||"",g.name||"",u.name||"",u.accountType||"",u.email||"",u.phone||"",
+        (u.address||"").replace(/\n/g," "),u.boatClass||"",u.sailNumber||"",u.ecName||"",u.ecPhone||"",
+        v.status||"",fmt(v.approvedArrival),fmt(v.approvedDeparture),fmt(v.actualArrival),fmt(v.actualDeparture),
+        u.waiver?u.waiver.version:"",u.waiver?fmt(u.waiver.signedAt):""]);
+    });
+  });
+  if(rows.length===1) return flash("Nothing in that date range.","err");
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="p2p-register-"+new Date().toISOString().slice(0,10)+".csv";
+  a.click();
+  flash("Exported "+(rows.length-1)+" rows.");
+}
+
+render();
+</script>
+</body>
+</html>
