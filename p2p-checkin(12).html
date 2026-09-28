@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2P Sailing — Check-In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0d2233; --navy-soft:#22455f; --paper:#f2f5f6; --card:#fff;
+  --ink:#122430; --quiet:#5b7183; --rule:#c9d6dd; --hair:#e3eaee;
+  --starboard:#00843d; --port:#c8102e; --flag:#1f5c8b; --tint:#e4edf1; --amber:#b4690e;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{margin:0;letter-spacing:-.01em;}
+button{font:inherit;cursor:pointer;}
+input,select,textarea{font:inherit;color:inherit;}
+
+.topbar{background:var(--navy);color:#e9f1f5;padding:0 20px;display:flex;align-items:center;gap:16px;height:60px;position:sticky;top:0;z-index:40;}
+.brand{font-weight:600;font-size:17px;}
+.brand small{display:block;font-weight:400;font-size:11px;color:#7fa8c2;letter-spacing:.02em;}
+.topbar .spacer{flex:1;}
+.who{font-size:13px;color:#bcd3e0;text-align:right;line-height:1.3;}
+.who b{display:block;color:#e9f1f5;font-weight:500;}
+.iconbtn{background:none;border:1px solid #2d5673;color:#cfe2ec;border-radius:6px;padding:7px 12px;font-size:13px;}
+.iconbtn:hover{border-color:#4d87ad;}
+.topbar .mark{height:44px;width:auto;display:block;}
+.pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.pagehead h2{margin:0;}
+
+.wrap{max-width:1020px;margin:0 auto;padding:26px 20px 100px;}
+.narrow{max-width:520px;margin:0 auto;padding:40px 20px 100px;}
+
+.card{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:22px;margin:0 0 20px;}
+.card h2{font-size:20px;margin:0 0 4px;color:var(--navy);}
+.card .sub{color:var(--quiet);font-size:14px;margin:0 0 18px;}
+
+label{display:block;font-size:13px;font-weight:500;color:var(--navy-soft);margin:14px 0 5px;}
+input[type=text],input[type=email],input[type=tel],input[type=password],input[type=date],input[type=number],input[type=search],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;background:#fff;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--flag);outline-offset:-1px;border-color:var(--flag);}
+textarea{min-height:80px;resize:vertical;}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.row{grid-template-columns:1fr;}}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:11px 20px;font-weight:500;}
+.btn:hover{background:var(--navy-soft);}
+.btn[disabled]{opacity:.45;cursor:not-allowed;}
+.btn.ghost{background:none;color:var(--navy);border:1px solid var(--rule);}
+.btn.ghost:hover{background:var(--tint);}
+.btn.go{background:var(--starboard);}
+.btn.stop{background:var(--port);}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:5px;}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+
+.boardsec{margin:0 0 34px;}
+.boardsec h2{font-size:15px;color:var(--navy);margin:0 0 2px;}
+.boardsec .count{color:var(--quiet);font-size:13px;margin:0 0 12px;}
+.grp{background:var(--card);border:1px solid var(--hair);border-radius:8px;padding:13px 16px;margin:0 0 9px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+.grp.flagged{border-left:3px solid var(--port);}
+.grp .main{flex:1;min-width:190px;}
+.grp.row-open{cursor:pointer;}
+.grp.row-open:hover{border-color:var(--flag);}
+.chev{color:var(--rule);font-size:22px;line-height:1;padding-left:4px;}
+.grp .nm{font-weight:600;color:var(--navy);}
+.grp .meta{font-size:13px;color:var(--quiet);}
+.grp .dates{font-size:13px;white-space:nowrap;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px;}
+.dot.on{background:var(--starboard);} .dot.wait{background:var(--amber);} .dot.up{background:var(--flag);}
+.dot.off{background:var(--rule);} .dot.no{background:var(--port);}
+.late{color:var(--port);font-weight:500;}
+.empty{color:var(--quiet);font-size:14px;padding:14px 16px;background:var(--card);border:1px dashed var(--rule);border-radius:8px;}
+
+.tabs{display:flex;gap:4px;margin:0 0 24px;border-bottom:1px solid var(--rule);flex-wrap:wrap;}
+.tabs button{background:none;border:0;padding:10px 14px;color:var(--quiet);font-weight:500;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tabs button.sel{color:var(--navy);border-bottom-color:var(--navy);}
+
+.scrim{position:fixed;inset:0;background:rgba(13,34,51,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;z-index:60;}
+.modal{background:var(--card);border-radius:10px;max-width:680px;width:100%;padding:24px;margin:auto;}
+.modal h2{font-size:20px;color:var(--navy);}
+.modal .x{float:right;background:none;border:0;font-size:22px;color:var(--quiet);line-height:1;}
+.modal h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--quiet);margin:26px 0 10px;}
+
+.pill{display:inline-block;font-size:12px;font-weight:500;padding:2px 9px;border-radius:20px;background:var(--tint);color:var(--navy-soft);}
+.pill.ok{background:#e2f2e9;color:var(--starboard);}
+.pill.warn{background:#fdf0dd;color:var(--amber);}
+.pill.bad{background:#fbe4e7;color:var(--port);}
+table.list{width:100%;border-collapse:collapse;font-size:14px;}
+table.list th{text-align:left;font-weight:600;color:var(--navy);padding:8px 10px;background:var(--tint);}
+table.list td{padding:9px 10px;border-top:1px solid var(--hair);vertical-align:top;}
+.onlynarrow,.onlytiny{display:none;}
+@media(max-width:620px){
+  .opt{display:none;}
+  .onlynarrow{display:inline;}
+  /* A wide table would otherwise push the whole page sideways and carry its
+     last column — the button you need — off the edge of the screen. */
+  table.list{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.list thead,table.list tbody,table.list tr{width:100%;}
+  .modal{padding:18px;}
+  .grp{padding:12px 13px;}
+}
+@media(max-width:430px){
+  /* on the narrowest phones even the status column has to fold into the name,
+     or the button at the end of the row sits off the screen */
+  .opt2{display:none;}
+  .onlytiny{display:inline;}
+  table.list th,table.list td{padding:8px 6px;}
+  .btn.sm{padding:6px 9px;}
+  .wrap,.narrow{padding-left:14px;padding-right:14px;}
+}
+.msg{padding:11px 14px;border-radius:6px;margin:0 0 16px;font-size:14px;}
+.msg.err{background:#fbe4e7;color:#8c0b20;}
+.msg.ok{background:#e2f2e9;color:#0a5c30;}
+.hint{font-size:13px;color:var(--quiet);margin:6px 0 0;}
+.build{position:fixed;bottom:8px;right:12px;font-size:11px;color:var(--quiet);z-index:10;}
+.center{text-align:center;}
+.chk{display:flex;align-items:flex-start;gap:9px;margin:12px 0;font-size:15px;}
+.chk input{width:auto;margin-top:4px;}
+.chk label{margin:0;font-weight:400;color:var(--ink);font-size:15px;}
+.money{font-weight:600;color:var(--navy);}
+.quote{background:var(--tint);padding:12px 14px;border-radius:6px;font-size:14px;margin-top:14px;}
+hr{border:0;border-top:1px solid var(--hair);margin:22px 0;}
+.subcard{border:1px solid var(--hair);border-radius:7px;padding:13px 15px;margin:0 0 9px;}
+.subcard .t{font-weight:600;color:var(--navy);}
+.subcard .m{font-size:13px;color:var(--quiet);}
+.tabnum{display:inline-block;min-width:18px;padding:1px 5px;border-radius:9px;background:var(--amber);color:#fff;font-size:11px;font-weight:600;text-align:center;vertical-align:1px;}
+.tabs button.sel .tabnum{background:var(--navy);}
+.why{font-size:13px;color:var(--port);font-weight:500;}
+.credstrip{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.credtitle{font-weight:600;color:var(--navy);font-size:16px;}
+.credsub{font-size:14px;color:var(--quiet);margin-top:2px;}
+.cranebox{border-left:2px solid var(--hair);margin:8px 0 2px 2px;padding:2px 0 2px 12px;}
+.cranebox .cr{font-size:13px;color:var(--quiet);margin:3px 0;}
+.assigned{font-size:14px;color:var(--ink);background:var(--tint);border-radius:5px;padding:6px 10px;margin:6px 0 2px;display:inline-block;}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="build">P12</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============================================================
+   P2P Sailing — Check-In.  Build P12.
+   Flat accounts · visits · storage · credentials · third parties
+   ============================================================ */
+
+/* --- CHECK THIS against the URL at the top of your Realtime
+       Database data viewer. --- */
+const DATABASE_URL = "https://pathway2podium-default-rtdb.firebaseio.com";
+const ARCHITECT = "colinjamesclayton@gmail.com";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCoC9OXeahZ-GshKpRBVpEXJymtvR4ayVw",
+  authDomain: "pathway2podium.firebaseapp.com",
+  databaseURL: DATABASE_URL,
+  projectId: "pathway2podium",
+  storageBucket: "pathway2podium.firebasestorage.app",
+  messagingSenderId: "828644304538",
+  appId: "1:828644304538:web:12fd47eaf2a18f1cff6123"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const DEFAULT_WAIVER = {
+  version: 1,
+  body: "I confirm that I am participating in activities at the P2P Sailing Center voluntarily and at my own risk. I confirm that I am medically fit to sail, that I can swim, and that I will wear a personal flotation device when afloat. I accept responsibility for my own equipment and for any damage I cause to the property of others. I agree to follow the instructions of P2P Sailing Center staff at all times.\n\nThis waiver applies to this and all future visits until P2P Sailing issues a revised version."
+};
+
+const DEFAULT_RATES = {
+  credentials: 200,
+  minBoatDays: 10,
+  lots: {
+    crescent:  { name:"Crescent Lot",  month:2500 },
+    watchhorn: { name:"Watchhorn Lot", month:2000 }
+  },
+  bands: {
+    ilca:  { name:"ILCA and 470",     month:300, day:15, onGrounds:true },
+    skiff: { name:"49er and 49erFX",  month:450, day:22.5, onGrounds:true },
+    nacra: { name:"Nacra 17",         month:600, day:30, onGrounds:true },
+    coach: { name:"Coach boat",       month:0, day:0, adminPriced:true, placement:true },
+    other: { name:"Other",            month:0,   day:0, adminPriced:true, onGrounds:true }
+  }
+};
+
+/* Third parties P2P coordinates with. A record carrying a coordinator is a
+   task for staff, not a P2P charge — except a container, which is both. */
+const VTI = "VTI Trucking";
+const CABRILLO = "Cabrillo Marina";
+
+/* P2P mark, supplied by the club. Inlined as a data URI so the app stays
+   one file with nothing to upload beside it. */
+const P2P_MARK = "data:image/png;base64,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";
+
+/* ---------- state ---------- */
+let S = {
+  user:null, me:null, isAdmin:false, isArchitect:false, adminsLoaded:false,
+  users:{}, visits:{}, storage:{}, thirdparty:{},
+  myVisits:{}, myStorage:{}, myThird:{},
+  admins:{}, waiver:DEFAULT_WAIVER, rates:DEFAULT_RATES,
+  tab:"board", modal:null, msg:null, onboardStep:null, draft:{}, search:"", form:{}
+};
+const $app = document.getElementById("app");
+
+/* ---------- helpers ---------- */
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ekey = e => String(e||"").toLowerCase().replace(/\./g,",");
+const now = () => Date.now();
+const DAY = 86400000;
+const usd = n => "$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2});
+
+function fmt(ts){
+  if(!ts) return "—";
+  const d=new Date(ts);
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" "+
+         d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+const fmtDay = ts => !ts?"—":new Date(ts).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+const fmtDate = ts => !ts?"—":new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+/* a moment staff act on: the day plus the hour it happens */
+const fmtWhen = ts => !ts?"—":new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})
+  +", "+new Date(ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+function toDateInput(ts){
+  if(!ts) return "";
+  const d=new Date(ts),p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+const fromDateInput = v => v ? new Date(v).getTime() : null;
+/* Times are recorded and shown because staff need them, but they must not reach
+   the billing: a container five hours past a whole month is not a second month,
+   and a boat collected at teatime is not an extra day. Both charge functions
+   therefore read the calendar day and ignore the clock. */
+const dayStart = ts => { const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
+function flash(t,k){ S.msg={text:t,kind:k||"ok"}; render(); setTimeout(()=>{S.msg=null;render();},4500); }
+const waiverOK = u => !!(u&&u.waiver&&u.waiver.version>=(S.waiver.version||1));
+
+/* whole months between two dates, any part month rounded up.
+   Each step is measured from the ORIGINAL start, with the day clamped to the
+   target month's last day. Stepping a single date forward month by month drifts
+   whenever the start is a 29th, 30th or 31st — Jan 31 plus a month rolls into
+   March — and the drift silently undercharges. */
+function monthsBetween(start,end){
+  if(!start||!end||end<=start) return 1;
+  start=dayStart(start); end=dayStart(end);
+  if(end<=start) return 1;
+  const s=new Date(start), day=s.getDate();
+  for(let m=1;m<=600;m++){
+    const d=new Date(s.getFullYear(), s.getMonth()+m, 1, s.getHours(), s.getMinutes());
+    const last=new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+    d.setDate(Math.min(day,last));
+    if(d.getTime()>=end) return m;
+  }
+  return 600;
+}
+const daysBetween = (s,e) => (!s||!e||e<=s)?0:Math.max(1,Math.round((dayStart(e)-dayStart(s))/DAY));
+
+/* A coach boat in the water lives at Cabrillo, so P2P neither charges for it
+   nor places it. On a trailer it sits on P2P ground: admin-priced, admin-placed. */
+const bandOf = rec => ((S.rates.bands||{})[rec.band])||{};
+const isCoach = rec => rec.kind==="boat" && rec.band==="coach";
+/* In the water means a slip at Cabrillo. Off site means somewhere P2P has no
+   part in — logged only so the boat exists and can ask for the crane. */
+const inWater = rec => isCoach(rec) && rec.placement==="water";
+const awayFromP2P = rec => isCoach(rec) && (rec.placement==="water"||rec.placement==="offsite");
+
+/* who, if anyone, P2P must talk to about this record */
+function coordinatorOf(rec){
+  /* only a container being shipped in needs the trucking company */
+  if(rec.kind==="container") return rec.shipping===false ? null : VTI;
+  if(rec.kind!=="boat") return null;
+  const b=bandOf(rec);
+  if(b.coordinator) return b.coordinator;
+  /* a slip at Cabrillo is Cabrillo's to arrange; a boat kept anywhere else is
+     nobody's business but its owner's */
+  return inWater(rec) ? CABRILLO : null;
+}
+/* does P2P bill for this at all */
+function chargeable(rec){
+  /* dropped, unloaded and taken away again — that is between the owner and VTI */
+  if(rec.kind==="container") return rec.purpose!=="transit";
+  if(rec.kind!=="boat") return true;
+  const b=bandOf(rec);
+  if(b.noCharge) return false;
+  /* P2P bills for ground it is holding, and nothing else */
+  return !awayFromP2P(rec);
+}
+/* does P2P give it a spot on the grounds */
+function placedByP2P(rec){
+  if(rec.kind==="container") return true;
+  if(rec.kind!=="boat") return false;
+  const b=bandOf(rec);
+  if(b.noCharge) return false;
+  return b.onGrounds || (isCoach(rec) && rec.placement==="trailer");
+}
+const locationLabel = rec =>
+  rec.kind==="container" ? "Lot location"
+  : (rec.band==="coach" ? "Location" : "Grid square");
+
+/* live cost, recomputed from the current rate card */
+function cost(rec){
+  const R=S.rates;
+  if(rec.kind==="credentials") return R.credentials||0;
+  if(rec.kind==="container"){
+    if(!chargeable(rec)) return 0;
+    const lot=(R.lots||{})[rec.lot];
+    return lot ? monthsBetween(rec.start,rec.end)*(lot.month||0) : 0;
+  }
+  if(rec.kind==="boat"){
+    const b=(R.bands||{})[rec.band];
+    if(!b) return 0;
+    if(!chargeable(rec)) return 0;
+    if(b.adminPriced) return Number(rec.amount||0);
+    return rec.basis==="day"
+      ? daysBetween(rec.start,rec.end)*(b.day||0)
+      : monthsBetween(rec.start,rec.end)*(b.month||0);
+  }
+  return 0;
+}
+function costLine(rec){
+  const R=S.rates;
+  if(rec.kind==="credentials") return "One year";
+  if(rec.kind==="container"){
+    if(!chargeable(rec)) return "No P2P charge";
+    const m=monthsBetween(rec.start,rec.end);
+    return m+" month"+(m===1?"":"s");
+  }
+  if(rec.kind==="boat"){
+    const b=(R.bands||{})[rec.band]||{};
+    if(!chargeable(rec)) return "No P2P charge";
+    if(b.adminPriced) return "Priced by P2P";
+    if(rec.basis==="day"){ const d=daysBetween(rec.start,rec.end); return d+" day"+(d===1?"":"s"); }
+    const m=monthsBetween(rec.start,rec.end); return m+" month"+(m===1?"":"s");
+  }
+  return "";
+}
+function recLabel(rec){
+  if(rec.kind==="credentials") return "Site credentials";
+  if(rec.kind==="container") return rec.purpose==="transit"
+    ? "Container, delivered and collected"
+    : (((S.rates.lots||{})[rec.lot]||{}).name||"Container");
+  if(rec.kind==="boat"){
+    const b=((S.rates.bands||{})[rec.band]||{}).name||"Boat";
+    const place=rec.band==="coach"&&rec.placement
+      ? " ("+({water:"in water at "+CABRILLO,trailer:"on trailer",offsite:"kept off site"}[rec.placement]||rec.placement)+")"
+      : "";
+    return b+place;
+  }
+  return rec.kind;
+}
+
+/* credentials */
+function credentialOf(uid){
+  const set=(S.isAdmin?S.storage[uid]:S.myStorage)||{};
+  const list=Object.entries(set).map(([id,r])=>Object.assign({id},r))
+    .filter(r=>r.kind==="credentials"&&r.status==="approved"&&r.paid&&r.end);
+  list.sort((a,b)=>(b.end||0)-(a.end||0));
+  return list[0]||null;
+}
+function credState(uid){
+  const c=credentialOf(uid);
+  if(c) return c.end<now()
+    ? {state:"expired",label:"Credentials expired "+fmtDate(c.end),rec:c}
+    : {state:"valid",label:"Credentials valid to "+fmtDate(c.end),rec:c};
+  /* nothing active — but a request may be sitting there unpaid */
+  const set=(S.isAdmin?S.storage[uid]:S.myStorage)||{};
+  const waiting=Object.entries(set).map(([id,r])=>Object.assign({id},r))
+    .find(r=>r.kind==="credentials"&&(r.status==="requested"||(r.status==="approved"&&!r.paid)));
+  if(waiting) return {state:"unpaid",label:"Credentials pending — awaiting payment",rec:waiting};
+  return {state:"none",label:"No credentials"};
+}
+/* The credential pill rides beside a person's name everywhere they appear. */
+const CRED_PILL={valid:["ok","Credentials"],expired:["bad","Credentials expired"],
+  unpaid:["warn","Credentials pending"],none:["","No credentials"]};
+function credPill(uid){
+  const c=credState(uid), p=CRED_PILL[c.state];
+  return ' <span class="pill '+p[0]+'" title="'+esc(c.label)+'">'+p[1]+'</span>';
+}
+
+/* flatten */
+/* Every child of these branches should be a person holding records. Anything
+   else is debris — a stray key written by a bad path, or a hand edit in the
+   console — and spreading a string here would breed a row per character. */
+const isRecordSet = v => !!v && typeof v==="object" && !Array.isArray(v);
+function flatten(root){
+  const out=[];
+  Object.entries(root||{}).forEach(([uid,set])=>{
+    if(!isRecordSet(set)) return;
+    Object.entries(set).forEach(([id,r])=>{
+      if(!isRecordSet(r)) return;
+      out.push(Object.assign({id,uid,person:S.users[uid]||{}},r));
+    });
+  });
+  return out;
+}
+const allVisits  = () => flatten(S.visits);
+const allStorage = () => flatten(S.storage);
+const allThird   = () => flatten(S.thirdparty);
+
+const mine = obj => Object.entries(obj||{}).filter(([id,r])=>isRecordSet(r)).map(([id,r])=>Object.assign({id},r));
+
+function personLine(p){
+  const bits=[p.accountType==="coach"?"Coach":"Sailor"];
+  if(p.federation) bits.push(p.federation);
+  if(p.boatClass) bits.push(p.boatClass);
+  return bits.join(" · ");
+}
+/* A container dropped and collected without being stored gets a spot only if
+   staff bother to give it one, so its location is never counted as missing. */
+const transitContainer = r => r.kind==="container" && r.purpose==="transit";
+const locationRequired = r => placedByP2P(r) && !transitContainer(r);
+/* something P2P never has on its ground: a Cabrillo dinghy, a coach boat afloat */
+const offSite = r => r.kind==="boat" && !placedByP2P(r);
+
+/* Everything still owed on a record, in the words an admin needs to read.
+   An empty list is what lets a record leave the pending pile. */
+function outstanding(r){
+  const out=[];
+  if(chargeable(r) && !r.paid) out.push("unpaid");
+  if(r.kind!=="credentials"){
+    if(!r.insuranceOK) out.push("no insurance");
+    if(!r.ownershipOK) out.push("no ownership");
+  }
+  if(locationRequired(r) && !r.location) out.push("no "+locationLabel(r).toLowerCase());
+  if(coordinatorOf(r) && !r.coordinated) out.push("not arranged with "+coordinatorOf(r));
+  return out;
+}
+const satisfied = r => outstanding(r).length===0;
+
+/* Exactly one home per record, so nothing is counted twice or lost.
+   pending · incoming · grounds · offsite · closed */
+function bucketOf(r){
+  if(r.kind==="credentials") return "credentials";
+  if(["departed","declined","cancelled","ended"].includes(r.status)) return "closed";
+  if(r.status==="onsite") return "grounds";
+  if(r.status==="requested") return "pending";
+  if(r.status==="approved"){
+    if(!satisfied(r)) return "pending";
+    return offSite(r) ? "offsite" : "incoming";
+  }
+  return "closed";
+}
+const needsAttention = r => bucketOf(r)==="pending" && r.status==="approved";
+const needsCoordination = r =>
+  !!coordinatorOf(r) && !r.coordinated && (r.status==="requested"||r.status==="approved");
+
+/* Saved rates override the built-in card, but a lot or band added in a later
+   build must still appear — otherwise a rate card saved under an older version
+   silently hides the new options and the only cure is deleting the node by hand. */
+function mergeRates(saved){
+  const out=JSON.parse(JSON.stringify(DEFAULT_RATES));
+  if(!saved||typeof saved!=="object") return out;
+  if(typeof saved.credentials==="number") out.credentials=saved.credentials;
+  if(typeof saved.minBoatDays==="number") out.minBoatDays=saved.minBoatDays;
+  ["lots","bands"].forEach(group=>{
+    Object.entries(saved[group]||{}).forEach(([k,v])=>{
+      /* a band this build no longer offers stays gone, whatever an old card says */
+      if(!out[group][k]) return;
+      /* a price the admin set wins; everything describing the option stays ours */
+      out[group][k]=Object.assign({}, out[group][k]||{}, {
+        name:(out[group][k]||{}).name||v.name,
+        month:typeof v.month==="number"?v.month:(out[group][k]||{}).month,
+        day:typeof v.day==="number"?v.day:(out[group][k]||{}).day
+      });
+      if(!(out[group][k]||{}).name) out[group][k].name=v.name||k;
+    });
+  });
+  return out;
+}
+
+/* ---------- data ---------- */
+function watchCommon(){
+  db.ref("admins").on("value",
+    s=>{S.admins=s.val()||{};S.adminsLoaded=true;recomputeAdmin();watchScoped();render();},
+    ()=>{S.adminsLoaded=true;recomputeAdmin();watchScoped();render();});
+  db.ref("waiver").on("value",s=>{S.waiver=s.val()||DEFAULT_WAIVER;render();},()=>{});
+  db.ref("rates").on("value",s=>{S.rates=mergeRates(s.val());render();},()=>{});
+}
+let scoped=false;
+function watchScoped(){
+  if(scoped||!S.user) return;
+  scoped=true;
+  const u=S.user.uid;
+  if(S.isAdmin){
+    db.ref("users").on("value",s=>{S.users=s.val()||{};render();},()=>{});
+    db.ref("visits").on("value",s=>{S.visits=s.val()||{};render();},()=>{});
+    db.ref("storage").on("value",s=>{S.storage=s.val()||{};render();},()=>{});
+    db.ref("thirdparty").on("value",s=>{S.thirdparty=s.val()||{};render();},()=>{});
+  }else{
+    db.ref("visits/"+u).on("value",s=>{S.myVisits=s.val()||{};render();},()=>{});
+    db.ref("storage/"+u).on("value",s=>{S.myStorage=s.val()||{};render();},()=>{});
+    db.ref("thirdparty/"+u).on("value",s=>{S.myThird=s.val()||{};render();},()=>{});
+  }
+}
+function recomputeAdmin(){
+  const e=(S.user&&S.user.email||"").toLowerCase();
+  S.isArchitect = e===ARCHITECT;
+  S.isAdmin = S.isArchitect || !!S.admins[ekey(e)];
+}
+
+auth.onAuthStateChanged(u=>{
+  S.user=u; scoped=false;
+  if(!u){ S.me=null; S.adminsLoaded=false; render(); return; }
+  db.ref("users/"+u.uid).on("value",s=>{
+    S.me=s.val(); recomputeAdmin();
+    if(!S.me) S.onboardStep=S.onboardStep||"type";
+    render();
+  },()=>{});
+  watchCommon();
+});
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  if(!S.user){ $app.innerHTML=viewAuth(); return bind(); }
+  if(!S.me){
+    if(!S.adminsLoaded){ $app.innerHTML=chrome(viewLoading()); return bind(); }
+    $app.innerHTML=chrome(S.isAdmin?viewStaffSetup():viewOnboard());
+    return bind();
+  }
+  $app.innerHTML=chrome(S.isAdmin?viewAdmin():viewPerson());
+  bind();
+}
+function chrome(inner){
+  return `
+  <div class="topbar">
+    <div class="brand">P2P Sailing<small>PATHWAY2PODIUM · CHECK-IN</small></div>
+    <div class="spacer"></div>
+    <img class="mark" src="${P2P_MARK}" alt="Pathway to Podium">
+  </div>${inner}${S.modal?viewModal():""}`;
+}
+const msgHTML = () => S.msg?`<div class="msg ${S.msg.kind==="err"?"err":"ok"}">${esc(S.msg.text)}</div>`:"";
+const viewLoading = () => `<div class="narrow"><div class="card center"><p class="sub" style="margin:0">Loading…</p></div></div>`;
+
+/* ---------- auth ---------- */
+function viewAuth(){
+  return `
+  <div class="topbar"><div class="brand">P2P Sailing<small>PATHWAY2PODIUM · CHECK-IN</small></div>
+    <div class="spacer"></div><img class="mark" src="${P2P_MARK}" alt="Pathway to Podium"></div>
+  <div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Sign in</h2>
+      <p class="sub">Create an account, then request dates, credentials or storage at the P2P Sailing Center.</p>
+      <button class="btn" data-act="google" style="width:100%">Continue with Google</button>
+      <hr>
+      <label for="ae">Email</label><input type="email" id="ae" autocomplete="email">
+      <label for="ap">Password</label><input type="password" id="ap" autocomplete="current-password">
+      <div class="actions">
+        <button class="btn" data-act="signin">Sign in</button>
+        <button class="btn ghost" data-act="signup">Create account</button>
+      </div>
+      <p class="hint">Six characters or more for a new password.</p>
+    </div>
+  </div>`;
+}
+function viewStaffSetup(){
+  return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Staff account</h2>
+      <p class="sub">You have admin access${S.isArchitect?" as the Architect":""}. Staff never appear on the board or in the export.</p>
+      <label>Your name</label><input type="text" id="st_name" placeholder="Shown on the audit trail">
+      <div class="actions"><button class="btn" data-act="staffsave">Continue to the board</button></div>
+    </div></div>`;
+}
+
+/* ---------- onboarding ---------- */
+function viewOnboard(){
+  const step=S.onboardStep||"type";
+
+  if(step==="type") return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Are you a sailor or a coach?</h2>
+      <p class="sub">Both do the same things here. The difference is only which details we ask for.</p>
+      <div class="actions">
+        <button class="btn" data-act="type" data-v="sailor">I am a sailor</button>
+        <button class="btn" data-act="type" data-v="coach">I am a coach</button>
+      </div>
+    </div></div>`;
+
+  if(step==="profile"){
+    const c=S.draft.accountType==="coach";
+    return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Your details</h2>
+      <p class="sub">Only a name and an email are required. Everything else helps P2P staff and can be added later.</p>
+      <label>Full name</label><input type="text" id="p_name" value="${esc(S.draft.name||"")}">
+      <label>Email</label><input type="email" id="p_email" value="${esc(S.draft.email||S.user.email||"")}">
+      <hr>
+      <p class="hint" style="margin:0 0 4px">Optional from here down.</p>
+      <div class="row">
+        <div><label>Phone</label><input type="tel" id="p_phone" value="${esc(S.draft.phone||"")}"></div>
+        <div><label>Federation</label><input type="text" id="p_fed" placeholder="US Sailing, RYA…" value="${esc(S.draft.federation||"")}"></div>
+      </div>
+      <label>Club or program</label><input type="text" id="p_club" value="${esc(S.draft.club||"")}">
+      ${c?`<label>Certification</label><input type="text" id="p_cert" value="${esc(S.draft.certification||"")}">`
+        :`<label>Boat class</label><input type="text" id="p_class" value="${esc(S.draft.boatClass||"")}">`}
+      <div class="row">
+        <div><label>Emergency contact</label><input type="text" id="p_ecn" value="${esc(S.draft.ecName||"")}"></div>
+        <div><label>Emergency phone</label><input type="tel" id="p_ecp" value="${esc(S.draft.ecPhone||"")}"></div>
+      </div>
+      <div class="actions"><button class="btn" data-act="profile-next">Continue to waiver</button></div>
+    </div></div>`;
+  }
+
+  if(step==="waiver") return `<div class="narrow">${msgHTML()}
+    <div class="card">
+      <h2>Waiver</h2>
+      <p class="sub">Signed once. It carries forward to every future visit.</p>
+      <div style="background:var(--tint);padding:16px;border-radius:6px;white-space:pre-wrap;font-size:14px;line-height:1.6">${esc(S.waiver.body)}</div>
+      <label>Type your full name to sign</label><input type="text" id="w_sig" placeholder="${esc(S.draft.name||"")}">
+      <div class="actions"><button class="btn go" data-act="sign">Sign and finish</button></div>
+    </div></div>`;
+  return "";
+}
+
+const STATUS={
+  requested:["wait","Awaiting approval"], approved:["up","Approved"],
+  onsite:["on","On site"], departed:["off","Departed"],
+  declined:["no","Declined"], cancelled:["no","Cancelled"], ended:["off","Ended"]
+};
+
+/* ---------- sailor / coach ---------- */
+function viewPerson(){
+  const u=S.me, uid=S.user.uid;
+  const vs=mine(S.myVisits).sort((a,b)=>(b.requestedArrival||0)-(a.requestedArrival||0));
+  /* credentials live in their own strip, so they are kept out of this list */
+  const st=mine(S.myStorage).filter(r=>r.kind!=="credentials")
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const tp=mine(S.myThird).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const cranes=tp.filter(t=>t.kind==="crane");
+  const cs=credState(uid);
+  const ok=waiverOK(u);
+
+  return `<div class="wrap">${msgHTML()}
+    <div class="card pagehead">
+      <div>
+        <h2>${esc(u.name)}</h2>
+        <p class="sub" style="margin:2px 0 0">${esc(personLine(u))}</p>
+      </div>
+      <button class="btn ghost" data-act="account">Account${ok?"":' <span class="pill bad">Waiver</span>'}</button>
+    </div>
+
+    <div class="card credstrip">
+      <div>
+        <div class="credtitle">Site credentials</div>
+        <div class="credsub">${
+          cs.state==="valid"?"Valid to "+fmtDate(cs.rec.end)
+          :cs.state==="unpaid"?"P2P will confirm once your payment has been received"
+          :cs.state==="expired"?"Expired "+fmtDate(cs.rec.end)+" — buy another year to stay on the grounds"
+          :"Required to be on the P2P grounds · "+usd(S.rates.credentials)+" a year"}</div>
+      </div>
+      <div>${
+        cs.state==="valid"?`<span class="pill ok">Valid</span>`
+        :cs.state==="unpaid"?`<span class="pill warn">Pending</span>`
+        :`<button class="btn" data-act="buycred" ${ok?"":"disabled"}>Buy credentials · ${usd(S.rates.credentials)}</button>`}</div>
+    </div>
+
+    <div class="card">
+      <h2>Dates on site</h2>
+      <p class="sub">Request as many separate visits as you need.</p>
+      <div class="actions" style="margin:0 0 16px">
+        <button class="btn" data-act="newvisit" ${ok?"":"disabled"}>Request dates</button>
+      </div>
+      ${ok?"":`<div class="msg err">Sign the current waiver before requesting anything.</div>`}
+      ${vs.length?vs.map(v=>{
+        const s=STATUS[v.status]||["off",v.status];
+        const a=v.approvedArrival||v.requestedArrival,d=v.approvedDeparture||v.requestedDeparture;
+        const am=v.approvedArrival&&(v.approvedArrival!==v.requestedArrival||v.approvedDeparture!==v.requestedDeparture);
+        return `<div class="grp"><div class="main">
+          <div class="nm"><span class="dot ${s[0]}"></span>${s[1]}</div>
+          <div class="meta">${fmt(a)} → ${fmt(d)}${am?" · dates amended by P2P":""}</div></div>
+          ${(v.status==="requested"||v.status==="approved")?`<button class="btn sm ghost" data-act="cancelvisit" data-id="${v.id}">Cancel</button>`:""}
+        </div>`;}).join(""):`<div class="empty">No visits requested yet.</div>`}
+    </div>
+
+    <div class="card">
+      <h2>Storage</h2>
+      <p class="sub">Boats and containers at the P2P grounds.</p>
+      <div class="actions" style="margin:0 0 16px">
+        <button class="btn" data-act="newboat" ${ok?"":"disabled"}>Request boat storage</button>
+        <button class="btn ghost" data-act="newcontainer" ${ok?"":"disabled"}>Request a container</button>
+      </div>
+      ${st.length?st.map(r=>myStorageRow(r,cranes)).join(""):`<div class="empty">Nothing stored or requested.</div>`}
+    </div>
+</div>`;
+}
+
+function myStorageRow(r,cranes){
+  const s=STATUS[r.status]||["off",r.status];
+  const billed=chargeable(r);
+  const showLoc=r.location&&(r.status==="approved"||r.status==="onsite");
+  /* only a coach boat gets the crane; sailors launch off the beach */
+  const coach=r.kind==="boat"&&r.band==="coach"&&bucketOf(r)!=="closed";
+  const mine=(cranes||[]).filter(c=>c.boatId===r.id)
+    .sort((a,b)=>(a.launch||0)-(b.launch||0));
+  return `<div class="grp ${needsAttention(r)?"flagged":""}"><div class="main">
+    <div class="nm">${esc(recLabel(r))}</div>
+    <div class="meta"><span class="dot ${s[0]}"></span>${s[1]}
+      ${r.start?" · "+fmtWhen(r.start)+" → "+fmtWhen(r.end):""}
+    </div>
+    ${showLoc?`<div class="assigned"><strong>${esc(locationLabel(r))} ${esc(r.location)}</strong> — assigned by P2P</div>`:""}
+    <div class="meta">${billed
+        ? costLine(r)+' · <span class="money">'+usd(cost(r))+'</span>'
+          +(r.paid?' <span class="pill ok">Paid</span>':' <span class="pill bad">Unpaid</span>')
+        : '<span class="pill">No P2P charge</span>'}
+      ${r.insuranceOK?' <span class="pill ok">Insurance</span>':' <span class="pill warn">Insurance</span>'}
+      ${r.ownershipOK?' <span class="pill ok">Ownership</span>':' <span class="pill warn">Ownership</span>'}
+    </div>
+    ${r.coordinator?`<div class="meta">${r.coordinated
+      ? '<span class="pill ok">Arranged with '+esc(r.coordinator)+'</span>'
+      : '<span class="pill warn">Contact '+esc(r.coordinator)+'</span>'}</div>`:""}
+    ${coach?`<div class="cranebox">
+      ${mine.map(c=>{
+        const cs2=STATUS[c.status]||["off",c.status];
+        return `<div class="cr"><span class="dot ${cs2[0]}"></span>Crane · launch ${fmtWhen(c.launch)}${
+          c.haul?", haul out "+fmtWhen(c.haul):""} · ${cs2[1]}</div>`;}).join("")}
+      <button class="btn sm ghost" data-act="newcrane" data-id="${r.id}">Request a crane launch</button>
+    </div>`:""}
+    </div>
+    ${(r.status==="requested")?`<button class="btn sm ghost" data-act="cancelstorage" data-id="${r.id}">Cancel</button>`:""}
+  </div>`;
+}
+
+/* ---------- admin ---------- */
+function viewAdmin(){
+  const tabs=[["board","Board"],["storage","Storage"],["containers","Containers"],
+              ["archive","Archives"],["settings","Settings"]];
+  const body = S.tab==="board"?adminBoard()
+             : S.tab==="storage"?adminYard("boat")
+             : S.tab==="containers"?adminYard("container")
+             : S.tab==="archive"?adminArchive() : adminSettings();
+  return `<div class="wrap">${msgHTML()}
+    <div class="tabs">${tabs.map(t=>{
+      const n=tabCount(t[0]);
+      return `<button data-act="tab" data-v="${t[0]}" class="${S.tab===t[0]?"sel":""}">${t[1]}${
+        n?` <span class="tabnum">${n}</span>`:""}</button>`;}).join("")}</div>
+    ${body}
+  </div>`;
+}
+/* how many things on that tab are waiting on a person */
+function tabCount(tab){
+  if(tab==="board") return allVisits().filter(v=>v.status==="requested").length;
+  if(tab==="storage") return allStorage().filter(r=>r.kind==="boat"&&bucketOf(r)==="pending").length
+    + allThird().filter(t=>t.kind==="crane"&&t.status==="requested").length;
+  if(tab==="containers") return allStorage().filter(r=>r.kind==="container"&&bucketOf(r)==="pending").length;
+  return 0;
+}
+
+function adminBoard(){
+  const all=allVisits();
+  const pend=all.filter(v=>v.status==="requested").sort((a,b)=>(a.requestedArrival||0)-(b.requestedArrival||0));
+  const on  =all.filter(v=>v.status==="onsite").sort((a,b)=>(a.approvedDeparture||0)-(b.approvedDeparture||0));
+  const up  =all.filter(v=>v.status==="approved").sort((a,b)=>(a.approvedArrival||0)-(b.approvedArrival||0));
+  return `
+  ${section("Awaiting approval",pend,"Nothing waiting on a decision.","pend")}
+  ${section("On site now",on,"Nobody is checked in.","on")}
+  ${section("Upcoming",up,"No approved arrivals.","up")}`;
+}
+function section(title,list,emptyText,mode){
+  return `<div class="boardsec"><h2>${title}</h2>
+    <p class="count">${list.length} ${list.length===1?"person":"people"}</p>
+    ${list.length?list.map(v=>boardRow(v,mode)).join(""):`<div class="empty">${emptyText}</div>`}</div>`;
+}
+function boardRow(v,mode){
+  const p=v.person, cs=credState(v.uid);
+  const a=v.approvedArrival||v.requestedArrival, d=v.approvedDeparture||v.requestedDeparture;
+  const overdue=mode==="on"&&d&&d<now();
+  return `<div class="grp row-open ${cs.state==="expired"||overdue?"flagged":""}" data-act="person" data-u="${v.uid}">
+    <div class="main">
+      <div class="nm">${esc(p.name||"Unknown")}${credPill(v.uid)}${
+        waiverOK(p)?"":' <span class="pill bad">no waiver</span>'}</div>
+      <div class="meta">${esc(personLine(p))}</div>
+      <div class="meta ${overdue?"late":""}">${fmtWhen(a)} → ${fmtWhen(d)}${overdue?" · overdue":""}</div>
+    </div>
+    <div class="chev">›</div>
+  </div>`;
+}
+
+function adminYard(kind){
+  const mine=allStorage().filter(r=>r.kind===kind);
+  const pending =mine.filter(r=>bucketOf(r)==="pending")
+    .sort((a,b)=>(a.start||a.createdAt||0)-(b.start||b.createdAt||0));
+  const grounds =mine.filter(r=>bucketOf(r)==="grounds")
+    .sort((a,b)=>(a.end||0)-(b.end||0));
+  const incoming=mine.filter(r=>bucketOf(r)==="incoming")
+    .sort((a,b)=>(a.start||0)-(b.start||0));
+  /* the only outside record left is a crane launch, and it belongs to the boat yard */
+  const cranePend=kind==="container"?[]:allThird().filter(t=>t.kind==="crane"&&t.status==="requested")
+    .sort((a,b)=>(a.launch||0)-(b.launch||0));
+  const craneOn=kind==="container"?[]:allThird().filter(t=>t.kind==="crane"&&t.status==="approved"
+      &&((t.haul||t.launch||0)>=now()-DAY))
+    .sort((a,b)=>(a.launch||0)-(b.launch||0));
+  const noun=kind==="container"?"Containers":"Boats";
+  const one =kind==="container"?"container":"boat";
+
+  return `
+
+  ${cranePend.length?`<div class="boardsec"><h2>Crane launches to approve</h2>
+    <p class="count">${cranePend.length} waiting</p>
+    ${cranePend.map(t=>craneRow(t,true)).join("")}
+  </div>`:""}
+
+  ${yardSection("Pending",pending,
+     "Nothing waiting — every "+one+" is approved and settled.","pending",kind)}
+  ${yardSection(noun+" on the grounds",grounds,
+     "No "+one+"s checked in.","grounds",kind)}
+  ${yardSection(noun+" incoming",incoming,
+     "Nothing approved and on its way.","incoming",kind)}
+
+  ${kind==="boat"?`<div class="boardsec"><h2>Crane operations booked</h2>
+    <p class="count">${craneOn.length} coming up</p>
+    ${craneOn.length?craneOn.map(t=>craneRow(t,false)).join("")
+      :`<div class="empty">No crane launches booked.</div>`}
+  </div>`:""}`;
+}
+
+/* A crane request names the boat it belongs to, so staff can tell the operator
+   what they are lifting without opening anything. */
+function yardSection(title,list,emptyText,bucket,kind){
+  return `<div class="boardsec"><h2>${title}</h2>
+    <p class="count">${list.length} ${list.length===1?"record":"records"}</p>
+    ${list.length?list.map(r=>yardRow(r,bucket)).join(""):`<div class="empty">${emptyText}</div>`}</div>`;
+}
+
+function yardRow(r,bucket){
+  const s=STATUS[r.status]||["off",r.status];
+  const why=outstanding(r);
+  const overdue=bucket==="grounds"&&r.end&&r.end<now();
+  const late=bucket==="incoming"&&r.start&&r.start<now();
+  /* No actions on the row. Every one of them lives in the person's menu, so
+     there is one way in and no chance of a button acting on the wrong record. */
+  return `<div class="grp row-open ${why.length||overdue||late?"flagged":""}" data-act="person" data-u="${r.uid}">
+    <div class="main">
+      <div class="nm">${esc(r.person.name||"Unknown")}${credPill(r.uid)}</div>
+      <div class="meta">${esc(recLabel(r))}${
+        r.start?" · "+fmtWhen(r.start)+" → "+fmtWhen(r.end):""}${
+        r.location?" · "+esc(locationLabel(r))+" "+esc(r.location):""}</div>
+      <div class="meta">${chargeable(r)
+          ? costLine(r)+' · <span class="money">'+usd(cost(r))+'</span>'
+            +(r.paid?' <span class="pill ok">Paid</span>':' <span class="pill bad">Unpaid</span>')
+          : '<span class="pill">No P2P charge</span>'}</div>
+      ${why.length?`<div class="why">Waiting on: ${esc(why.join(", "))}</div>`:""}
+      ${overdue?`<div class="why">Past its end date — still logged as on the grounds</div>`:""}
+      ${late?`<div class="why">Start date has passed and it has not been logged in</div>`:""}
+    </div>
+    <div class="chev">›</div>
+  </div>`;
+}
+
+function craneRow(t,pending){
+  const boat=(S.storage[t.uid]||{})[t.boatId];
+  const s=STATUS[t.status]||["off",t.status];
+  return `<div class="grp row-open ${pending?"flagged":""}" data-act="person" data-u="${t.uid}">
+    <div class="main">
+      <div class="nm">${esc(t.person.name||"Unknown")}${credPill(t.uid)}</div>
+      <div class="meta">${boat?esc(recLabel(boat)):"Boat no longer on record"}${
+        boat&&boat.location?" · "+esc(locationLabel(boat))+" "+esc(boat.location):""}</div>
+      <div class="meta"><span class="dot ${s[0]}"></span>Launch ${fmtWhen(t.launch)}${
+        t.haul?" · haul out "+fmtWhen(t.haul):""}${t.note?" · "+esc(t.note):""}</div>
+    </div>
+    <div class="chev">›</div>
+  </div>`;
+}
+
+function adminArchive(){
+  return `
+  <div class="card">
+    <h2>Export</h2><p class="sub">Every visit and storage record in the range, as CSV.</p>
+    <div class="row">
+      <div><label>From</label><input type="date" id="x_from"></div>
+      <div><label>To</label><input type="date" id="x_to"></div>
+    </div>
+    <div class="actions"><button class="btn" data-act="export">Download CSV</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Search</h2>
+    <p class="sub">Filters everything below.</p>
+    <input type="search" id="q" placeholder="Name, federation, club, boat class…" value="${esc(S.search)}">
+  </div>
+
+  <div id="archiveresults">${archiveResults()}</div>`;
+}
+
+/* Kept apart from the card around it so typing in the search box replaces only
+   these results — redrawing the whole page would drop the phone keyboard. */
+function archiveResults(){
+  const q=S.search.toLowerCase();
+  const match=r=>{
+    if(!q) return true;
+    const p=r.person||r;
+    return [p.name,p.federation,p.email,p.boatClass,p.club].join(" ").toLowerCase().includes(q);
+  };
+  const visits=allVisits().filter(v=>["departed","declined","cancelled"].includes(v.status)).filter(match)
+    .sort((a,b)=>(b.actualDeparture||b.requestedArrival||0)-(a.actualDeparture||a.requestedArrival||0));
+  const store=allStorage().filter(r=>bucketOf(r)==="closed").filter(match)
+    .sort((a,b)=>(b.end||b.createdAt||0)-(a.end||a.createdAt||0));
+  const off=allStorage().filter(r=>bucketOf(r)==="offsite").filter(match)
+    .sort((a,b)=>(a.start||0)-(b.start||0));
+  const people=Object.entries(S.users).filter(([id,u])=>u.accountType!=="staff")
+    .map(([id,u])=>Object.assign({uid:id},u)).filter(match)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+
+  return `
+  <div class="card">
+    <h2>Accounts</h2><p class="sub">${people.length} registered. Tap to open.</p>
+    <table class="list"><thead><tr><th>Name</th><th class="opt">Type</th><th class="opt">Federation</th><th class="opt2">Credentials</th><th></th></tr></thead><tbody>
+    ${people.map(u=>{
+      const cs=credState(u.uid);
+      return `<tr>
+      <td><strong>${esc(u.name)}</strong><br><span style="color:var(--quiet);font-size:13px">${esc(u.email||"")}</span>
+        <span class="onlynarrow" style="color:var(--quiet);font-size:13px"><br>${u.accountType==="coach"?"Coach":"Sailor"}${u.federation?" · "+esc(u.federation):""}</span>
+        <span class="onlytiny"><br>${credPill(u.uid)}</span></td>
+      <td class="opt">${u.accountType==="coach"?"Coach":"Sailor"}</td>
+      <td class="opt">${esc(u.federation||"—")}</td>
+      <td>${cs.state==="valid"?'<span class="pill ok">Valid to '+fmtDate(cs.rec.end)+'</span>'
+          :cs.state==="expired"?'<span class="pill bad">Expired '+fmtDate(cs.rec.end)+'</span>'
+          :cs.state==="unpaid"?'<span class="pill warn">Pending</span>'
+          :'<span class="pill">None</span>'}</td>
+      <td><button class="btn sm ghost" data-act="person" data-u="${u.uid}">Open</button></td></tr>`;}).join("")
+      ||`<tr><td colspan="5" style="color:var(--quiet)">No accounts.</td></tr>`}
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Kept off site</h2>
+    <p class="sub">Slips at ${esc(CABRILLO)} and boats kept elsewhere. Reference only — P2P never has these on the grounds, and charges nothing for them.</p>
+    ${off.length?off.map(r=>`<div class="grp"><div class="main" data-act="person" data-u="${r.uid}">
+      <div class="nm">${esc(r.person.name||"Unknown")}${credPill(r.uid)}</div>
+      <div class="meta">${esc(recLabel(r))}${r.coordinator?" · "+esc(r.coordinator):""}</div></div>
+      <div class="dates">${r.start?fmtWhen(r.start)+" → "+fmtWhen(r.end):"—"}</div>
+    </div>`).join(""):`<div class="empty">Nothing kept off site.</div>`}
+  </div>
+
+  <div class="card">
+    <h2>Past visits</h2>
+    ${visits.length?visits.map(v=>{const s=STATUS[v.status]||["off",v.status];
+      return `<div class="grp"><div class="main" data-act="person" data-u="${v.uid}">
+        <div class="nm">${esc(v.person.name||"Unknown")}</div>
+        <div class="meta"><span class="dot ${s[0]}"></span>${s[1]} · ${esc(v.person.federation||"—")}</div></div>
+        <div class="dates">${v.actualArrival?fmtDay(v.actualArrival)+" → "+fmtDay(v.actualDeparture):fmtDay(v.requestedArrival)}</div>
+      </div>`;}).join(""):`<div class="empty">No past visits.</div>`}
+  </div>
+
+  <div class="card">
+    <h2>Closed storage</h2>
+    ${store.length?store.map(r=>{const s=STATUS[r.status]||["off",r.status];
+      return `<div class="grp"><div class="main" data-act="person" data-u="${r.uid}">
+        <div class="nm">${esc(r.person.name||"Unknown")} · ${esc(recLabel(r))}</div>
+        <div class="meta"><span class="dot ${s[0]}"></span>${s[1]}${
+          chargeable(r)?" · "+usd(cost(r))+" · "+(r.paid?"paid":"unpaid"):" · no P2P charge"}</div></div>
+        <div class="dates">${r.actualArrival?fmtWhen(r.actualArrival)+" → "+fmtWhen(r.actualDeparture||0):(r.start?fmtWhen(r.start)+" → "+fmtWhen(r.end):"—")}</div>
+      </div>`;}).join(""):`<div class="empty">Nothing closed yet.</div>`}
+  </div>`;
+}
+
+function adminSettings(){
+  const admins=Object.keys(S.admins);
+  const R=S.rates;
+  return `
+  <div class="card pagehead">
+    <div>
+      <h2>${esc((S.me&&S.me.name)||"Account")}</h2>
+      <p class="sub" style="margin:2px 0 0">${S.isArchitect?"Architect":"Admin"} · ${esc(S.user.email||"")}</p>
+    </div>
+    <button class="btn stop" data-act="signout">Sign out</button>
+  </div>
+
+  <div class="card">
+    <h2>Rates</h2><p class="sub">All prices in USD. Part months round up. Daily boat storage has a minimum stay.</p>
+    <div class="row">
+      <div><label>Site credentials, per year</label><input type="number" id="r_cred" step="0.01" value="${R.credentials||0}"></div>
+      <div><label>Minimum days for daily boat storage</label><input type="number" id="r_min" value="${R.minBoatDays||10}"></div>
+    </div>
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--quiet);margin:24px 0 10px">Container lots, per month</h3>
+    ${Object.entries(R.lots||{}).map(([k,l])=>`<div class="row">
+      <div><label>${esc(l.name)}</label><input type="number" id="r_lot_${k}" step="0.01" value="${l.month||0}"></div>
+      <div></div></div>`).join("")}
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--quiet);margin:24px 0 10px">Boat storage</h3>
+    ${Object.entries(R.bands||{}).map(([k,b])=>b.noCharge
+      ?`<p class="hint" style="margin:10px 0"><strong>${esc(b.name)}</strong> — no P2P charge; ${esc(b.coordinator||"the third party")} bills directly.</p>`
+      :b.adminPriced
+      ?`<p class="hint" style="margin:10px 0"><strong>${esc(b.name)}</strong> — priced by an admin on each request.</p>`
+      :`<div class="row">
+      <div><label>${esc(b.name)} — per month</label><input type="number" id="r_bm_${k}" step="0.01" value="${b.month||0}"></div>
+      <div><label>${esc(b.name)} — per day</label><input type="number" id="r_bd_${k}" step="0.01" value="${b.day||0}"></div>
+    </div>`).join("")}
+    <div class="actions"><button class="btn" data-act="saverates">Save rates</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Admins</h2><p class="sub">Granted by email address. The Architect is permanent.</p>
+    <table class="list"><tbody>
+      <tr><td><strong>${esc(ARCHITECT)}</strong></td><td style="text-align:right"><span class="pill">Architect</span></td></tr>
+      ${admins.map(k=>`<tr><td>${esc(k.replace(/,/g,"."))}</td><td style="text-align:right">${
+        S.isArchitect?`<button class="btn sm ghost" data-act="rmadmin" data-id="${k}">Remove</button>`:'<span class="pill">Admin</span>'}</td></tr>`).join("")}
+    </tbody></table>
+    ${S.isArchitect?`<label>Add an admin</label><input type="email" id="ad_email" placeholder="name@example.org">
+      <div class="actions"><button class="btn" data-act="addadmin">Grant admin</button></div>`:""}
+  </div>
+
+
+  <div class="card">
+    <h2>Waiver text</h2>
+    <p class="sub">Current version ${S.waiver.version}. Publishing a new version asks everyone to sign again.</p>
+    <textarea id="wv_body" style="min-height:200px">${esc(S.waiver.body)}</textarea>
+    <div class="actions">
+      <button class="btn ghost" data-act="savewaiver">Save without changing version</button>
+      <button class="btn" data-act="bumpwaiver">Publish as version ${(S.waiver.version||1)+1}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- modals ---------- */
+function viewModal(){
+  const m=S.modal;
+  const body = m.kind==="account"     ? modalAccount()
+             : m.kind==="person"      ? modalPerson(m.u)
+             : m.kind==="amend"       ? modalAmend(m.u,m.id)
+             : m.kind==="newvisit"    ? modalNewVisit()
+             : m.kind==="newboat"     ? modalNewBoat()
+             : m.kind==="newcontainer"? modalNewContainer()
+             : m.kind==="newcrane"    ? modalNewCrane()
+             : m.kind==="editstore"   ? modalEditStore(m.u,m.id) : "";
+  return `<div class="scrim" data-act="scrim"><div class="modal">${body}</div></div>`;
+}
+
+/* the one person view, opened from everywhere */
+function modalAccount(){
+  const u=S.me||{}, c=u.accountType==="coach", staff=u.accountType==="staff";
+  const ok=waiverOK(u);
+  const role=S.isArchitect?"Architect":S.isAdmin?"Admin":(c?"Coach":"Sailor");
+  const row=(k,v)=>`<tr><td style="width:180px;color:var(--quiet)">${k}</td><td>${v||"—"}</td></tr>`;
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>${esc(u.name||"Account")}</h2>
+  <p class="sub">${esc(staff?role:personLine(u))}</p>
+
+  <table class="list"><tbody>
+    ${row("Email",esc(u.email||S.user.email||""))}
+    ${staff?"":`
+    ${row("Phone",esc(u.phone||""))}
+    ${row("Federation",esc(u.federation||""))}
+    ${row("Club or program",esc(u.club||""))}
+    ${c?row("Certification",esc(u.certification||""))
+       :row("Boat class",esc(u.boatClass||""))}
+    ${row("Emergency contact",esc(u.ecName||"")+(u.ecPhone?" · "+esc(u.ecPhone):""))}
+    ${row("Waiver", ok
+      ? '<span class="pill ok">Signed</span> version '+u.waiver.version+', '+fmtDate(u.waiver.signedAt)
+      : '<span class="pill bad">Re-sign needed</span> <button class="btn sm ghost" data-act="resign">Sign now</button>')}`}
+  </tbody></table>
+
+  ${staff?"":`<p class="hint" style="margin-top:14px">These details are maintained by P2P staff. Ask an admin to change anything here.</p>`}
+
+  <div class="actions">
+    <button class="btn ghost" data-act="close">Close</button>
+    <button class="btn stop" data-act="signout">Sign out</button>
+  </div>`;
+}
+
+function modalPerson(uid){
+  const u=S.users[uid]||{}, c=u.accountType==="coach";
+  const vs=Object.entries(S.visits[uid]||{}).map(([id,r])=>Object.assign({id},r))
+    .sort((a,b)=>(b.requestedArrival||0)-(a.requestedArrival||0));
+  const st=Object.entries(S.storage[uid]||{}).map(([id,r])=>Object.assign({id},r))
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const tp=Object.entries(S.thirdparty[uid]||{}).map(([id,r])=>Object.assign({id},r));
+  const cs=credState(uid);
+  const owed=st.filter(r=>!["departed","declined","cancelled","ended"].includes(r.status)&&chargeable(r)&&!r.paid)
+               .reduce((s,r)=>s+cost(r),0);
+  const cred=st.find(r=>r.kind==="credentials"&&(r.status==="requested"||(r.status==="approved"&&!r.paid)));
+
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>${esc(u.name||"Unknown")}</h2>
+  <p class="sub">${esc(personLine(u))}${u.email?" · "+esc(u.email):""}</p>
+
+  <div class="quote" style="margin-top:0">
+    ${cs.state==="valid"?`<span class="pill ok">Credentials valid</span> to ${fmtDate(cs.rec.end)}`
+      :cs.state==="expired"?`<span class="pill bad">Credentials expired</span> ${fmtDate(cs.rec.end)}`
+      :cs.state==="unpaid"?`<span class="pill warn">Credentials pending</span> awaiting payment`
+      :`<span class="pill">No credentials</span>`}
+    ${waiverOK(u)?` <span class="pill ok">Waiver v${u.waiver.version}</span>`:` <span class="pill bad">Waiver behind</span>`}
+    ${owed>0?`<div style="margin-top:8px">Outstanding: <span class="money">${usd(owed)}</span></div>`:""}
+    ${cred?`<div class="actions" style="margin-top:10px">
+      <button class="btn sm go" data-act="paycred" data-u="${uid}" data-id="${cred.id}">Credentials paid — start the year</button></div>`:""}
+  </div>
+
+  <h3>Visits</h3>
+  ${vs.length?vs.map(v=>{
+    const s=STATUS[v.status]||["off",v.status];
+    return `<div class="subcard"><div class="t">${s[1]}</div>
+      <div class="m">Requested ${fmt(v.requestedArrival)} → ${fmt(v.requestedDeparture)}</div>
+      ${v.approvedArrival?`<div class="m">Approved ${fmt(v.approvedArrival)} → ${fmt(v.approvedDeparture)}</div>`:""}
+      ${v.actualArrival?`<div class="m">In ${fmt(v.actualArrival)}${v.actualDeparture?" · out "+fmt(v.actualDeparture):""}</div>`:""}
+      <div class="actions" style="margin-top:10px">
+        ${v.status==="requested"?`<button class="btn sm go" data-act="approve" data-u="${uid}" data-id="${v.id}">Approve</button>`:""}
+        ${v.status==="requested"||v.status==="approved"?`<button class="btn sm ghost" data-act="amend" data-u="${uid}" data-id="${v.id}">Amend</button>`:""}
+        ${v.status==="requested"?`<button class="btn sm stop" data-act="decline" data-u="${uid}" data-id="${v.id}">Decline</button>`:""}
+        ${v.status==="approved"?`<button class="btn sm go" data-act="checkin" data-u="${uid}" data-id="${v.id}">Check in</button>`:""}
+        ${v.status==="onsite"?`<button class="btn sm" data-act="checkout" data-u="${uid}" data-id="${v.id}">Check out</button>`:""}
+      </div></div>`;}).join(""):`<div class="empty">No visits.</div>`}
+
+  <h3>Storage</h3>
+  ${st.filter(r=>r.kind!=="credentials").length?st.filter(r=>r.kind!=="credentials").map(r=>{
+    const s=STATUS[r.status]||["off",r.status];
+    return `<div class="subcard ${needsAttention(r)?"":""}">
+      <div class="t">${esc(recLabel(r))}</div>
+      <div class="m">${s[1]}${r.start?" · "+fmtWhen(r.start)+" → "+fmtWhen(r.end):""}${
+        r.location?" · "+esc(locationLabel(r))+" "+esc(r.location):""}</div>
+      <div class="m">${chargeable(r)
+          ? costLine(r)+' · <span class="money">'+usd(cost(r))+'</span>'
+            +(r.paid?' <span class="pill ok">Paid</span>':' <span class="pill bad">Unpaid</span>')
+          : '<span class="pill">No P2P charge</span>'}
+        ${r.coordinator?(r.coordinated
+          ? ' <span class="pill ok">'+esc(r.coordinator)+' arranged</span>'
+          : ' <span class="pill warn">'+esc(r.coordinator)+' to contact</span>'):""}
+        ${r.kind!=="credentials"?(r.insuranceOK?' <span class="pill ok">Insurance</span>':' <span class="pill warn">Insurance</span>'):""}
+        ${r.kind!=="credentials"?(r.ownershipOK?' <span class="pill ok">Ownership</span>':' <span class="pill warn">Ownership</span>'):""}</div>
+      ${r.note?`<div class="m">Note: ${esc(r.note)}</div>`:""}
+      ${(r.status==="approved"&&!satisfied(r))?`<div class="why" style="margin-top:6px">Waiting on: ${esc(outstanding(r).join(", "))}</div>`:""}
+      <div class="actions" style="margin-top:10px">
+        ${r.status==="requested"?`<button class="btn sm go" data-act="editstore" data-u="${uid}" data-id="${r.id}">Review and approve</button>
+          <button class="btn sm stop" data-act="declinestore" data-u="${uid}" data-id="${r.id}">Decline</button>`:""}
+        ${(r.status==="approved"&&!offSite(r)&&r.kind!=="credentials")?`<button class="btn sm go" data-act="arrive" data-u="${uid}" data-id="${r.id}">Arrived</button>`:""}
+        ${r.status==="onsite"?`<button class="btn sm" data-act="depart" data-u="${uid}" data-id="${r.id}">Left</button>`:""}
+        ${(r.coordinator&&!r.coordinated&&bucketOf(r)!=="closed")?`<button class="btn sm go" data-act="markcoord" data-u="${uid}" data-id="${r.id}">Arranged with ${esc(r.coordinator)}</button>`:""}
+        ${r.status!=="requested"?`<button class="btn sm ghost" data-act="editstore" data-u="${uid}" data-id="${r.id}">Open</button>`:""}
+      </div></div>`;}).join(""):`<div class="empty">Nothing stored.</div>`}
+
+  ${tp.filter(t=>t.kind==="crane").length?`<h3>Crane launches</h3>
+  ${tp.filter(t=>t.kind==="crane").sort((a,b)=>(a.launch||0)-(b.launch||0)).map(t=>{
+    const s2=STATUS[t.status]||["off",t.status];
+    const boat=(S.storage[uid]||{})[t.boatId];
+    return `<div class="subcard"><div class="t">${boat?esc(recLabel(boat)):"Boat no longer on record"}</div>
+      <div class="m">${s2[1]} · launch ${fmtWhen(t.launch)}${t.haul?" · haul out "+fmtWhen(t.haul):""}</div>
+      ${t.note?`<div class="m">${esc(t.note)}</div>`:""}
+      ${t.status==="requested"?`<div class="actions" style="margin-top:10px">
+        <button class="btn sm go" data-act="thirdok" data-u="${uid}" data-id="${t.id}">Approve</button>
+        <button class="btn sm stop" data-act="thirdno" data-u="${uid}" data-id="${t.id}">Decline</button></div>`:""}
+    </div>`;}).join("")}`:""}
+
+
+  <h3>Details</h3>
+  <input type="hidden" id="ed_id" value="${esc(uid)}">
+  <label>Full name</label><input type="text" id="ed_name" value="${esc(u.name||"")}">
+  <div class="row">
+    <div><label>Phone</label><input type="tel" id="ed_phone" value="${esc(u.phone||"")}"></div>
+    <div><label>Federation</label><input type="text" id="ed_fed" value="${esc(u.federation||"")}"></div>
+  </div>
+  ${c?`<label>Certification</label><input type="text" id="ed_cert" value="${esc(u.certification||"")}">`
+   :`<label>Boat class</label><input type="text" id="ed_class" value="${esc(u.boatClass||"")}">`}
+  <label>Club or program</label><input type="text" id="ed_club" value="${esc(u.club||"")}">
+  <div class="row">
+    <div><label>Emergency contact</label><input type="text" id="ed_ecn" value="${esc(u.ecName||"")}"></div>
+    <div><label>Emergency phone</label><input type="tel" id="ed_ecp" value="${esc(u.ecPhone||"")}"></div>
+  </div>
+  <div class="actions">
+    <button class="btn" data-act="saveperson">Save changes</button>
+    <button class="btn ghost" data-act="close">Close</button>
+  </div>`;
+}
+
+function modalEditStore(uid,sid){
+  const r=(S.storage[uid]||{})[sid]||{};
+  const u=S.users[uid]||{};
+  const band=(S.rates.bands||{})[r.band]||{};
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>${esc(recLabel(r))}</h2>
+  <p class="sub">${esc(u.name||"")} · ${(STATUS[r.status]||["",r.status])[1]}</p>
+  <input type="hidden" id="es_u" value="${esc(uid)}"><input type="hidden" id="es_id" value="${esc(sid)}">
+
+  <div class="row">
+    <div><label>Start</label><input type="datetime-local" id="es_start" value="${toDateInput(r.start)}"></div>
+    <div><label>End</label><input type="datetime-local" id="es_end" value="${toDateInput(r.end)}"></div>
+  </div>
+  ${placedByP2P(r)?`<label>${locationLabel(r)}</label>
+    <input type="text" id="es_loc" placeholder="${r.kind==="container"?"Row, bay or reference":"Grid square or reference"}" value="${esc(r.location||"")}">
+    <p class="hint">Visible to the owner as soon as this is approved.</p>`:""}
+  ${(band.adminPriced&&chargeable(r))?`<label>Amount for this boat</label>
+    <input type="number" id="es_amount" step="0.01" value="${r.amount||0}">`:""}
+  <label>Note</label><textarea id="es_note">${esc(r.note||"")}</textarea>
+
+  <div class="quote">
+    ${chargeable(r)?costLine(r)+' · <span class="money">'+usd(cost(r))+'</span>':"No P2P charge for this."}
+  </div>
+
+  ${r.coordinator?`<div class="quote" style="margin-top:12px"><strong>${esc(r.coordinator)}</strong> handles this one.</div>
+  <div class="chk"><input type="checkbox" id="es_coord" ${r.coordinated?"checked":""}><label for="es_coord">Arranged with ${esc(r.coordinator)}</label></div>`:""}
+
+  ${chargeable(r)?`<div class="chk"><input type="checkbox" id="es_paid" ${r.paid?"checked":""}><label for="es_paid">Payment received</label></div>`:""}
+  ${r.kind!=="credentials"?`
+  <div class="chk"><input type="checkbox" id="es_ins" ${r.insuranceOK?"checked":""}><label for="es_ins">Insurance received, naming Pathway2Podium</label></div>
+  <div class="chk"><input type="checkbox" id="es_own" ${r.ownershipOK?"checked":""}><label for="es_own">Proof of ownership received</label></div>`:""}
+
+  ${(r.status==="approved"&&!satisfied(r))?`<p class="hint" style="margin-top:14px">Still outstanding: ${esc(outstanding(r).join(", "))}. It stays in the pending list until these are cleared.</p>`:""}
+
+  <div class="actions">
+    <button class="btn" data-act="savestore">Save</button>
+    ${r.status==="requested"?`<button class="btn go" data-act="approvestore" data-u="${uid}" data-id="${sid}">Save and approve</button>`:""}
+    ${r.status==="requested"?`<button class="btn stop" data-act="declinestore" data-u="${uid}" data-id="${sid}">Decline</button>`:""}
+    ${(r.status==="approved"&&!offSite(r)&&r.kind!=="credentials")?`<button class="btn go" data-act="arrive" data-u="${uid}" data-id="${sid}">Arrived on site</button>`:""}
+    ${r.status==="onsite"?`<button class="btn" data-act="depart" data-u="${uid}" data-id="${sid}">Left the site</button>`:""}
+    ${(r.status==="approved"||r.status==="onsite")?`<button class="btn ghost" data-act="endstore" data-u="${uid}" data-id="${sid}">Close this record</button>`:""}
+  </div>`;
+}
+
+function modalAmend(uid,vid){
+  const v=(S.visits[uid]||{})[vid]||{};
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Approved dates</h2>
+  <p class="sub">Requested: ${fmt(v.requestedArrival)} → ${fmt(v.requestedDeparture)}</p>
+  <input type="hidden" id="am_u" value="${esc(uid)}"><input type="hidden" id="am_id" value="${esc(vid)}">
+  <div class="row">
+    <div><label>Arrival</label><input type="datetime-local" id="am_a" value="${toDateInput(v.approvedArrival||v.requestedArrival)}"></div>
+    <div><label>Departure</label><input type="datetime-local" id="am_d" value="${toDateInput(v.approvedDeparture||v.requestedDeparture)}"></div>
+  </div>
+  <div class="actions">
+    <button class="btn go" data-act="saveamend">Save${v.status==="requested"?" and approve":""}</button>
+    <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+function modalNewVisit(){
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Request dates</h2>
+  <p class="sub">A P2P admin reviews every request and may amend the dates when approving.</p>
+  <div class="row">
+    <div><label>Arrival</label><input type="datetime-local" id="nv_a"></div>
+    <div><label>Departure</label><input type="datetime-local" id="nv_d"></div>
+  </div>
+  <div class="actions">
+    <button class="btn" data-act="submitvisit">Submit request</button>
+    <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+/* The live price is its own small region so a date change can refresh it
+   WITHOUT re-rendering the page. Tearing down the DOM while a phone's date
+   picker is open closes the picker — iOS fires `change` as the wheels spin,
+   long before anyone taps Done. */
+function boatQuote(){
+  const R=S.rates, f=S.form;
+  const band=f.band||"ilca", basis=f.basis||"month", placement=f.placement||"trailer";
+  const b=(R.bands||{})[band]||{};
+  const start=fromDateInput(f.start||""), end=fromDateInput(f.end||"");
+  const draft={kind:"boat",band,basis,placement,start,end,amount:0};
+  if(!chargeable(draft)) return `<div class="quote">No P2P storage charge for this.</div>`;
+  if(b.adminPriced) return `<div class="quote">P2P will price this and tell you the amount.</div>`;
+  if(!start||!end||end<=start) return "";
+  const n=basis==="day"?daysBetween(start,end):monthsBetween(start,end);
+  const minD=R.minBoatDays||10;
+  const short=basis==="day"&&n<minD;
+  return `<div class="quote">${n} ${basis==="day"?"day":"month"}${n===1?"":"s"} · <span class="money">${usd(cost(draft))}</span>
+    ${basis==="month"?"<br><span class='hint'>Part months round up. The time of day is for P2P staff and does not change the price.</span>":""}
+    ${short?`<br><span class="why">Daily storage needs at least ${minD} days.</span>`:""}</div>`;
+}
+function containerQuote(){
+  const f=S.form;
+  const purpose=f.purpose||"stored";
+  if(purpose!=="stored")
+    return `<div class="quote">No P2P charge — a container that is only dropped and collected goes through ${esc(VTI)} and your own shipping arrangements.</div>`;
+  const lot=f.lot||Object.keys(S.rates.lots||{})[0];
+  const start=fromDateInput(f.start||""), end=fromDateInput(f.end||"");
+  if(!start||!end||end<=start) return "";
+  const m=monthsBetween(start,end);
+  return `<div class="quote">${m} month${m===1?"":"s"} · <span class="money">${usd(cost({kind:"container",lot,purpose,start,end}))}</span>
+    <br><span class="hint">Part months round up. The time of day is for P2P staff and does not change the price.</span></div>`;
+}
+
+function modalNewBoat(){
+  const R=S.rates, f=S.form;
+  const band=f.band||"ilca", basis=f.basis||"month";
+  const placement=f.placement||"trailer";
+  const b=(R.bands||{})[band]||{};
+  const start=f.start||"", end=f.end||"";
+  const draft={kind:"boat",band,basis,placement,start:fromDateInput(start),end:fromDateInput(end),amount:0};
+  const billed=chargeable(draft);
+  const coord=coordinatorOf(draft);
+  const preview=(start&&end)?cost(draft):null;
+  const days=(start&&end)?daysBetween(fromDateInput(start),fromDateInput(end)):0;
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Request boat storage</h2>
+  <p class="sub">Every stored boat needs insurance and proof of ownership naming Pathway2Podium.</p>
+  <label>Boat</label>
+  <select id="nb_band" data-act="formchange" data-f="band">
+    ${Object.entries(R.bands||{}).map(([k,v])=>`<option value="${k}" ${k===band?"selected":""}>${esc(v.name)}${
+      (v.adminPriced||v.noCharge)?"":" — "+usd(v.month)+"/month · "+usd(v.day)+"/day"}</option>`).join("")}
+  </select>
+  ${b.placement?`<label>Where will it be kept</label>
+  <select id="nb_place" data-act="formchange" data-f="placement">
+    <option value="trailer" ${placement==="trailer"?"selected":""}>On a trailer on the P2P grounds</option>
+    <option value="water" ${placement==="water"?"selected":""}>In the water — a slip at ${esc(CABRILLO)}</option>
+    <option value="offsite" ${placement==="offsite"?"selected":""}>Off site — logged only so it can use the crane</option>
+  </select>
+  ${placement==="offsite"?`<div class="quote" style="margin-top:12px">P2P holds nothing and charges nothing for a boat kept off site. Logging it here lets you request the crane, and P2P still needs insurance and proof of ownership before lifting it.</div>`:""}`:""}
+  ${billed&&!b.adminPriced?`<label>Charged</label>
+  <select id="nb_basis" data-act="formchange" data-f="basis">
+    <option value="month" ${basis==="month"?"selected":""}>Per month</option>
+    <option value="day" ${basis==="day"?"selected":""}>Per day — minimum ${R.minBoatDays||10} days</option>
+  </select>`:""}
+  <div class="row">
+    <div><label>Start</label><input type="datetime-local" id="nb_start" data-act="formchange" data-f="start" value="${esc(start)}"></div>
+    <div><label>End</label><input type="datetime-local" id="nb_end" data-act="formchange" data-f="end" value="${esc(end)}"></div>
+  </div>
+  ${(b.adminPriced||b.noCharge)?`<label>Tell P2P about this boat</label><textarea id="nb_note" placeholder="Class, dimensions, anything staff should know">${esc(f.note||"")}</textarea>`:""}
+  ${coord?`<div class="quote"><strong>${esc(coord)} must be contacted.</strong><br>
+    P2P records the dates and flags this for staff, but the arrangement and any payment are made with ${esc(coord)} directly.</div>`:""}
+  <div id="formquote">${boatQuote()}</div>
+  <div class="actions">
+    <button class="btn" data-act="submitboat">Submit request</button>
+    <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+function modalNewContainer(){
+  const R=S.rates, f=S.form;
+  const purpose=f.purpose||"stored";
+  const stored=purpose==="stored";
+  const shipping=f.shipping===undefined?true:(f.shipping==="yes"||f.shipping===true);
+  const lot=f.lot||Object.keys(R.lots||{})[0];
+  const start=f.start||"", end=f.end||"";
+  const preview=(stored&&start&&end&&lot)?cost({kind:"container",lot,start:fromDateInput(start),end:fromDateInput(end)}):null;
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Request a container</h2>
+  <p class="sub">Every container needs insurance and proof of ownership naming Pathway2Podium, however long it is here.</p>
+
+  <label>What is happening</label>
+  <select id="nc_purpose" data-act="formchange" data-f="purpose">
+    <option value="stored" ${stored?"selected":""}>Stored in a lot</option>
+    <option value="transit" ${stored?"":"selected"}>Delivered and collected — unloaded, then taken away</option>
+  </select>
+
+  ${stored?`<label>Lot</label>
+  <select id="nc_lot" data-act="formchange" data-f="lot">
+    ${Object.entries(R.lots||{}).map(([k,v])=>`<option value="${k}" ${k===lot?"selected":""}>${esc(v.name)} — ${usd(v.month)}/month</option>`).join("")}
+  </select>`:""}
+
+  <div class="row">
+    <div><label>${stored?"Start":"Arrives"}</label><input type="datetime-local" id="nc_start" data-act="formchange" data-f="start" value="${esc(start)}"></div>
+    <div><label>${stored?"End":"Collected"}</label><input type="datetime-local" id="nc_end" data-act="formchange" data-f="end" value="${esc(end)}"></div>
+  </div>
+
+  <label>Are you shipping it in?</label>
+  <select id="nc_ship" data-act="formchange" data-f="shipping">
+    <option value="yes" ${shipping?"selected":""}>Yes — shipping it to P2P</option>
+    <option value="no" ${shipping?"":"selected"}>No — it is already here or arriving another way</option>
+  </select>
+  ${shipping?`<div class="quote" style="margin-top:12px"><strong>${esc(VTI)} must be contacted.</strong><br>
+    ${esc(VTI)} handles every container into and out of P2P. Submitting this records your dates and flags it for staff — you still arrange the move with ${esc(VTI)} directly.</div>`:""}
+
+  <label>Note for P2P</label><textarea id="nc_note">${esc(f.note||"")}</textarea>
+
+  <div id="formquote">${containerQuote()}</div>
+
+  <div class="actions">
+    <button class="btn" data-act="submitcontainer">Submit request</button>
+    <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+function modalNewCrane(){
+  const r=(S.myStorage||{})[S.form.boatId]||{};
+  return `<button class="x" data-act="close">&times;</button>
+  <h2>Request a crane launch</h2>
+  <p class="sub">${esc(recLabel(r))} — P2P staff approve the dates so the crane operator can be booked.</p>
+  <input type="hidden" id="ncr_boat" value="${esc(S.form.boatId||"")}">
+  <div class="row">
+    <div><label>Launch</label><input type="datetime-local" id="ncr_launch"></div>
+    <div><label>Haul out</label><input type="datetime-local" id="ncr_haul"></div>
+  </div>
+  <label>Note</label><textarea id="ncr_note" placeholder="Anything the operator should know"></textarea>
+  <div class="quote">No charge. Ask again whenever you need another lift.</div>
+  <div class="actions">
+    <button class="btn" data-act="submitcrane">Submit request</button>
+    <button class="btn ghost" data-act="close">Cancel</button></div>`;
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+/* Refresh just the live price, leaving every input in the DOM untouched. */
+function refreshQuote(){
+  const box=document.getElementById("formquote");
+  if(!box||!S.modal) return;
+  box.innerHTML = S.modal.kind==="newboat" ? boatQuote()
+                : S.modal.kind==="newcontainer" ? containerQuote() : "";
+}
+
+function bind(){
+  $app.querySelectorAll("[data-act]").forEach(el=>{
+    if(el.dataset.act==="formchange"){
+      /* A <select> is finished the moment it changes, so redrawing the form is
+         safe and lets one choice reveal another. A date or time input is not:
+         on a phone the native picker stays open and belongs to this very
+         element, so replacing the DOM would close it mid-entry. Those only
+         update the state and the price. */
+      const live = el.tagName==="SELECT";
+      el.onchange=e=>{
+        S.form[el.dataset.f]=e.target.value;
+        if(live) render(); else refreshQuote();
+      };
+      return;
+    }
+    if(el.dataset.act==="scrim"){
+      /* Dismissing a native picker can land a stray click on the backdrop.
+         Only close when the press AND the release both happened out here. */
+      let downOnScrim=false;
+      el.onpointerdown=ev=>{ downOnScrim = ev.target===el; };
+      el.onclick=ev=>{
+        if(ev.target!==el||!downOnScrim) return;
+        downOnScrim=false;
+        ev.stopPropagation();
+        handle("scrim",el);
+      };
+      return;
+    }
+    el.onclick=ev=>{ ev.stopPropagation(); handle(el.dataset.act,el); };
+  });
+
+  const q=document.getElementById("q");
+  if(q){
+    /* Same rule: never redraw the page under a field someone is typing in,
+       or the phone keyboard closes on every keystroke. Only the results move. */
+    q.oninput=e=>{
+      S.search=e.target.value;
+      const box=document.getElementById("archiveresults");
+      if(box){ box.innerHTML=archiveResults(); bindIn(box); }
+      else render();
+    };
+  }
+}
+/* rebind clicks inside a region that was replaced on its own */
+function bindIn(root){
+  root.querySelectorAll("[data-act]").forEach(el=>{
+    el.onclick=ev=>{ ev.stopPropagation(); handle(el.dataset.act,el); };
+  });
+}
+const val=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+/* A missing id used to fall through as "" and send the write to the branch root
+   instead of a record, silently corrupting it. Nothing may be written without
+   both ids, and a caller that cannot supply them fails loudly. */
+function recRef(branch,u,id){
+  if(!u||!id) throw new Error("Nothing selected — reopen the record and try again.");
+  return db.ref(branch+"/"+u+"/"+id);
+}
+const chk=id=>{const e=document.getElementById(id);return e?e.checked:false;};
+const num=id=>{const e=document.getElementById(id);return e?Number(e.value||0):0;};
+const audit=(r,what)=>(r.audit||[]).concat([{at:now(),by:S.user.email,what}]);
+
+async function handle(act,el){
+  const U=el.dataset.u, V=el.dataset.id;
+  try{
+    if(act==="google"){ await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); return; }
+    if(act==="signin"){ await auth.signInWithEmailAndPassword(val("ae"),val("ap")); return; }
+    if(act==="signup"){ await auth.createUserWithEmailAndPassword(val("ae"),val("ap")); return; }
+    if(act==="signout"){ S.onboardStep=null;S.draft={}; await auth.signOut(); location.reload(); return; }
+
+    if(act==="staffsave"){
+      const name=val("st_name"); if(!name) return flash("Enter your name.","err");
+      await db.ref("users/"+S.user.uid).set({accountType:"staff",name,email:S.user.email,createdAt:now()});
+      return;
+    }
+
+    /* onboarding */
+    if(act==="type"){ S.draft.accountType=el.dataset.v; S.onboardStep="profile"; return render(); }
+    if(act==="profile-next"){
+      const d=S.draft;
+      d.name=val("p_name"); d.email=val("p_email")||S.user.email;
+      d.phone=val("p_phone"); d.federation=val("p_fed"); d.club=val("p_club");
+      d.ecName=val("p_ecn"); d.ecPhone=val("p_ecp");
+      if(d.accountType==="coach") d.certification=val("p_cert");
+      else { d.boatClass=val("p_class"); }
+      if(!d.name) return flash("A name is required.","err");
+      if(!d.email) return flash("An email is required.","err");
+      S.onboardStep="waiver"; return render();
+    }
+    if(act==="sign"){
+      const sig=val("w_sig"), d=S.draft;
+      if(sig.toLowerCase()!==String(d.name||"").toLowerCase())
+        return flash("The signature must match the name on your profile.","err");
+      const rec={
+        accountType:d.accountType, name:d.name, email:d.email,
+        phone:d.phone||"", federation:d.federation||"", club:d.club||"",
+        ecName:d.ecName||"", ecPhone:d.ecPhone||"",
+        waiver:{version:S.waiver.version||1,signedAt:now(),signature:sig}, createdAt:now()
+      };
+      if(d.accountType==="coach") rec.certification=d.certification||"";
+      else { rec.boatClass=d.boatClass||""; }
+      await db.ref("users/"+S.user.uid).set(rec);
+      S.onboardStep=null; S.draft={};
+      return flash("Account created.");
+    }
+    if(act==="resign"){
+      await db.ref("users/"+S.user.uid+"/waiver")
+        .set({version:S.waiver.version,signedAt:now(),signature:S.me.name});
+      return flash("Waiver signed.");
+    }
+
+    /* requests by the person */
+    if(act==="newvisit"){ S.modal={kind:"newvisit"}; return render(); }
+    if(act==="newboat"){ S.form={}; S.modal={kind:"newboat"}; return render(); }
+    if(act==="newcontainer"){ S.form={}; S.modal={kind:"newcontainer"}; return render(); }
+    if(act==="newcrane"){ S.form={boatId:el.dataset.id}; S.modal={kind:"newcrane"}; return render(); }
+
+    if(act==="submitvisit"){
+      const a=new Date(val("nv_a")).getTime(), d=new Date(val("nv_d")).getTime();
+      if(!a||!d||isNaN(a)||isNaN(d)) return flash("Set both dates.","err");
+      if(d<=a) return flash("Departure must be after arrival.","err");
+      await db.ref("visits/"+S.user.uid).push().set({
+        uid:S.user.uid, requestedArrival:a, requestedDeparture:d, status:"requested",
+        createdAt:now(), audit:[{at:now(),by:S.user.email,what:"requested"}]});
+      S.modal=null; return flash("Request submitted.");
+    }
+    if(act==="buycred"){
+      await db.ref("storage/"+S.user.uid).push().set({
+        uid:S.user.uid, kind:"credentials", status:"requested", paid:false,
+        amount:S.rates.credentials||0, createdAt:now(),
+        audit:[{at:now(),by:S.user.email,what:"credentials requested"}]});
+      return flash("Credentials requested. P2P will confirm once payment is received.");
+    }
+    if(act==="submitboat"){
+      const band=S.form.band||"ilca", basis=S.form.basis||"month";
+      const b=(S.rates.bands||{})[band]||{};
+      const placement=b.placement?(S.form.placement||"trailer"):null;
+      const start=fromDateInput(val("nb_start")), end=fromDateInput(val("nb_end"));
+      if(!start||!end) return flash("Set both dates.","err");
+      if(end<=start) return flash("The end date must be after the start.","err");
+      const draft={kind:"boat",band,basis,placement,start,end};
+      const minD=S.rates.minBoatDays||10;
+      /* the minimum only bites where P2P actually bills by the day */
+      if(chargeable(draft)&&!b.adminPriced&&basis==="day"&&daysBetween(start,end)<minD)
+        return flash("Daily boat storage has a minimum of "+minD+" days. Choose a longer stay or monthly storage.","err");
+      const coord=coordinatorOf(draft);
+      const rec={
+        uid:S.user.uid, kind:"boat", band, basis, start, end,
+        note:val("nb_note")||"",
+        status:"requested", paid:false, insuranceOK:false, ownershipOK:false,
+        amount:(b.adminPriced||!chargeable(draft))?0:cost(draft),
+        createdAt:now(), audit:[{at:now(),by:S.user.email,what:"requested"}]};
+      if(placement) rec.placement=placement;
+      if(coord){ rec.coordinator=coord; rec.coordinated=false; }
+      await db.ref("storage/"+S.user.uid).push().set(rec);
+      S.modal=null; S.form={};
+      return flash(coord
+        ? "Requested. Contact "+coord+" directly to arrange it — P2P has flagged this for staff."
+        : "Boat storage requested.");
+    }
+    if(act==="submitcontainer"){
+      const purpose=S.form.purpose||"stored";
+      const shipping=S.form.shipping===undefined?true:(S.form.shipping==="yes");
+      const lot=purpose==="stored"?(S.form.lot||Object.keys(S.rates.lots||{})[0]):null;
+      const start=fromDateInput(val("nc_start")), end=fromDateInput(val("nc_end"));
+      if(!start||!end) return flash("Set both dates.","err");
+      if(end<=start) return flash(purpose==="stored"
+        ? "The end date must be after the start." : "Collection must be after arrival.","err");
+      const draft={kind:"container",purpose,shipping,lot,start,end};
+      const rec={
+        uid:S.user.uid, kind:"container", purpose, shipping, start, end, note:val("nc_note")||"",
+        status:"requested", paid:false, insuranceOK:false, ownershipOK:false,
+        amount:cost(draft),
+        createdAt:now(), audit:[{at:now(),by:S.user.email,what:"requested"}]};
+      if(lot) rec.lot=lot;
+      const coord=coordinatorOf(draft);
+      if(coord){ rec.coordinator=coord; rec.coordinated=false; }
+      await db.ref("storage/"+S.user.uid).push().set(rec);
+      S.modal=null; S.form={};
+      return flash(coord
+        ? "Container requested. Contact "+coord+" directly to arrange the move — P2P has flagged this for staff."
+        : "Container requested.");
+    }
+    if(act==="submitcrane"){
+      const boatId=val("ncr_boat");
+      const launch=fromDateInput(val("ncr_launch")), haul=fromDateInput(val("ncr_haul"));
+      if(!launch) return flash("Set a launch date.","err");
+      if(haul&&haul<launch) return flash("The haul out cannot be before the launch.","err");
+      await db.ref("thirdparty/"+S.user.uid).push().set({
+        uid:S.user.uid, kind:"crane", boatId, launch, haul:haul||null,
+        note:val("ncr_note")||"", status:"requested", createdAt:now()});
+      S.modal=null; S.form={};
+      return flash("Crane launch requested. P2P staff will confirm the dates.");
+    }
+    if(act==="cancelvisit"){
+      if(!confirm("Cancel this request?")) return;
+      const v=S.myVisits[V]||{};
+      await recRef("visits",S.user.uid,V).update({status:"cancelled",audit:audit(v,"cancelled")});
+      return flash("Cancelled.");
+    }
+    if(act==="cancelstorage"){
+      if(!confirm("Cancel this request?")) return;
+      const r=S.myStorage[V]||{};
+      await recRef("storage",S.user.uid,V).update({status:"cancelled",audit:audit(r,"cancelled")});
+      return flash("Cancelled.");
+    }
+
+    /* admin */
+    if(act==="tab"){ S.tab=el.dataset.v; return render(); }
+    if(act==="account"){ S.modal={kind:"account"}; return render(); }
+    if(act==="person"){ S.modal={kind:"person",u:U}; return render(); }
+    if(act==="amend"){ S.modal={kind:"amend",u:U,id:V}; return render(); }
+    if(act==="editstore"){ S.modal={kind:"editstore",u:U,id:V}; return render(); }
+    if(act==="close"||act==="scrim"){ S.modal=null; S.form={}; return render(); }
+
+    if(act==="approve"){
+      const v=(S.visits[U]||{})[V]||{};
+      await recRef("visits",U,V).update({
+        approvedArrival:v.approvedArrival||v.requestedArrival,
+        approvedDeparture:v.approvedDeparture||v.requestedDeparture,
+        status:"approved", audit:audit(v,"approved")});
+      return flash("Approved.");
+    }
+    if(act==="decline"){
+      if(!confirm("Decline this request?")) return;
+      const v=(S.visits[U]||{})[V]||{};
+      await recRef("visits",U,V).update({status:"declined",audit:audit(v,"declined")});
+      return flash("Declined.");
+    }
+    if(act==="checkin"){
+      const v=(S.visits[U]||{})[V]||{};
+      await recRef("visits",U,V).update({status:"onsite",actualArrival:now(),audit:audit(v,"checked in")});
+      return flash("Checked in.");
+    }
+    if(act==="checkout"){
+      const v=(S.visits[U]||{})[V]||{};
+      await recRef("visits",U,V).update({status:"departed",actualDeparture:now(),audit:audit(v,"checked out")});
+      return flash("Checked out.");
+    }
+    if(act==="saveamend"){
+      const u=val("am_u"), id=val("am_id"), v=(S.visits[u]||{})[id]||{};
+      const a=new Date(val("am_a")).getTime(), d=new Date(val("am_d")).getTime();
+      if(!a||!d||isNaN(a)||isNaN(d)||d<=a) return flash("Check the dates.","err");
+      const patch={approvedArrival:a,approvedDeparture:d,audit:audit(v,"dates amended")};
+      if(v.status==="requested") patch.status="approved";
+      await recRef("visits",u,id).update(patch);
+      S.modal=null; return flash("Dates saved.");
+    }
+
+    /* storage admin */
+    if(act==="savestore"||act==="approvestore"){
+      const u=U||val("es_u"), id=V||val("es_id"), r=(S.storage[u]||{})[id]||{};
+      const patch={
+        start:fromDateInput(val("es_start")), end:fromDateInput(val("es_end")),
+        note:val("es_note")
+      };
+      /* only touch a field whose control was actually on screen — a hidden
+         checkbox reads as false and would silently clear what it stands for */
+      if(document.getElementById("es_paid")) patch.paid=chk("es_paid");
+      if(document.getElementById("es_loc")) patch.location=val("es_loc");
+      if(document.getElementById("es_amount")) patch.amount=num("es_amount");
+      if(document.getElementById("es_ins")) patch.insuranceOK=chk("es_ins");
+      if(document.getElementById("es_own")) patch.ownershipOK=chk("es_own");
+      if(document.getElementById("es_coord")) patch.coordinated=chk("es_coord");
+      if(act==="approvestore"){ patch.status="approved"; patch.audit=audit(r,"approved"); }
+      else patch.audit=audit(r,"updated");
+      /* credentials run one year from the day payment is recorded */
+      if(r.kind==="credentials"&&patch.paid&&!r.paid){
+        patch.start=now();
+        const y=new Date(); y.setFullYear(y.getFullYear()+1); patch.end=y.getTime();
+      }
+      await recRef("storage",u,id).update(patch);
+      S.modal=null; return flash(act==="approvestore"?"Approved.":"Saved.");
+    }
+    if(act==="paycred"){
+      const r=(S.storage[U]||{})[V]||{};
+      const y=new Date(); y.setFullYear(y.getFullYear()+1);
+      await recRef("storage",U,V).update({
+        status:"approved", paid:true, start:now(), end:y.getTime(),
+        audit:audit(r,"credentials paid")});
+      return flash("Credentials active for one year.");
+    }
+    if(act==="arrive"){
+      const r=(S.storage[U]||{})[V]||{};
+      await recRef("storage",U,V).update({
+        status:"onsite", actualArrival:now(), audit:audit(r,"arrived on site")});
+      S.modal=null; return flash("Logged as on site.");
+    }
+    if(act==="depart"){
+      const r=(S.storage[U]||{})[V]||{};
+      await recRef("storage",U,V).update({
+        status:"departed", actualDeparture:now(), audit:audit(r,"left the site")});
+      S.modal=null; return flash("Logged as gone.");
+    }
+    if(act==="declinestore"){
+      if(!confirm("Decline this request?")) return;
+      const r=(S.storage[U]||{})[V]||{};
+      await recRef("storage",U,V).update({status:"declined",audit:audit(r,"declined")});
+      S.modal=null; return flash("Declined.");
+    }
+    if(act==="endstore"){
+      if(!confirm("Close this record? It moves to the archive.")) return;
+      const r=(S.storage[U]||{})[V]||{};
+      await recRef("storage",U,V).update({status:"ended",audit:audit(r,"closed")});
+      S.modal=null; return flash("Closed.");
+    }
+    if(act==="markcoord"){
+      const r=(S.storage[U]||{})[V]||{};
+      await recRef("storage",U,V).update({
+        coordinated:true, audit:audit(r,"arranged with "+(r.coordinator||"the third party"))});
+      return flash("Recorded as arranged with "+(r.coordinator||"the third party")+".");
+    }
+    if(act==="thirdok"){
+      await recRef("thirdparty",U,V).update({status:"approved"});
+      return flash("Recorded as accepted.");
+    }
+    if(act==="thirdno"){
+      await recRef("thirdparty",U,V).update({status:"declined"});
+      return flash("Recorded as declined.");
+    }
+
+    if(act==="saveperson"){
+      const id=val("ed_id"), u=S.users[id]||{};
+      const p={name:val("ed_name"),phone:val("ed_phone"),federation:val("ed_fed"),
+        club:val("ed_club"),ecName:val("ed_ecn"),ecPhone:val("ed_ecp")};
+      if(u.accountType==="coach") p.certification=val("ed_cert");
+      else { p.boatClass=val("ed_class"); }
+      await db.ref("users/"+id).update(p);
+      S.modal=null; return flash("Saved.");
+    }
+    if(act==="saverates"){
+      const R=JSON.parse(JSON.stringify(S.rates));
+      R.credentials=num("r_cred");
+      R.minBoatDays=num("r_min");
+      Object.keys(R.lots||{}).forEach(k=>{ if(document.getElementById("r_lot_"+k)) R.lots[k].month=num("r_lot_"+k); });
+      Object.keys(R.bands||{}).forEach(k=>{
+        if(document.getElementById("r_bm_"+k)) R.bands[k].month=num("r_bm_"+k);
+        if(document.getElementById("r_bd_"+k)) R.bands[k].day=num("r_bd_"+k);
+      });
+      await db.ref("rates").set(R);
+      return flash("Rates saved.");
+    }
+    if(act==="addadmin"){
+      const e=val("ad_email").toLowerCase(); if(!e) return;
+      await db.ref("admins/"+ekey(e)).set(true); return flash("Admin granted to "+e);
+    }
+    if(act==="rmadmin"){ await db.ref("admins/"+V).remove(); return flash("Admin removed."); }
+    if(act==="savewaiver"){
+      await db.ref("waiver").set({version:S.waiver.version||1,body:val("wv_body")});
+      return flash("Waiver text saved.");
+    }
+    if(act==="bumpwaiver"){
+      if(!confirm("Everyone who signed the old version will be asked to sign again. Continue?")) return;
+      await db.ref("waiver").set({version:(S.waiver.version||1)+1,body:val("wv_body")});
+      return flash("New waiver version published.");
+    }
+    if(act==="export") return exportCSV();
+
+  }catch(err){ flash(err.message||String(err),"err"); }
+}
+
+function exportCSV(){
+  const from=val("x_from")?new Date(val("x_from")).getTime():0;
+  const to  =val("x_to")?new Date(val("x_to")).getTime()+DAY:Infinity;
+  const rows=[["Record","Name","Type","Federation","Club","Email","Phone",
+    "Boat class","Emergency contact","Emergency phone",
+    "Item","Status","Start","End","Actual in","Actual out","Basis","Amount USD","Paid",
+    "Insurance","Ownership","Location","Third party","Arranged","Waiver version"]];
+  const base=u=>[u.name||"",u.accountType||"",u.federation||"",u.club||"",u.email||"",u.phone||"",
+    u.boatClass||"",u.ecName||"",u.ecPhone||""];
+
+  allVisits().forEach(v=>{
+    const t=v.approvedArrival||v.requestedArrival||0;
+    if(t<from||t>to) return;
+    const u=v.person;
+    rows.push(["Visit",...base(u),"Site visit",v.status||"",
+      fmt(v.approvedArrival||v.requestedArrival),fmt(v.approvedDeparture||v.requestedDeparture),
+      fmt(v.actualArrival),fmt(v.actualDeparture),"","","","","","","","",
+      u.waiver?u.waiver.version:""]);
+  });
+  allStorage().forEach(r=>{
+    const t=r.start||r.createdAt||0;
+    if(t<from||t>to) return;
+    const u=r.person;
+    rows.push(["Storage",...base(u),recLabel(r),r.status||"",
+      fmtWhen(r.start),fmtWhen(r.end),fmtWhen(r.actualArrival),fmtWhen(r.actualDeparture),
+      !chargeable(r)?"no P2P charge"
+        :r.kind==="boat"?(r.basis==="day"?"per day":"per month")
+        :r.kind==="container"?"per month":"annual",
+      chargeable(r)?cost(r):"", chargeable(r)?(r.paid?"yes":"no"):"",
+      r.kind==="credentials"?"":(r.insuranceOK?"yes":"no"),
+      r.kind==="credentials"?"":(r.ownershipOK?"yes":"no"),
+      r.location||"", r.coordinator||"",
+      r.coordinator?(r.coordinated?"yes":"no"):"",
+      u.waiver?u.waiver.version:""]);
+  });
+  if(rows.length===1) return flash("Nothing in that date range.","err");
+  const csv=rows.map(r=>r.map(c=>`"${String(c==null?"":c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="p2p-register-"+new Date().toISOString().slice(0,10)+".csv";
+  a.click();
+  flash("Exported "+(rows.length-1)+" rows.");
+}
+
+render();
+</script>
+</body>
+</html>
